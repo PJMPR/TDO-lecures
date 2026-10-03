@@ -1,0 +1,11 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo .NET + MySQL · TDO</title><link rel="stylesheet" href="../../assets/css/site.css"></head><body><header class="site-header"><nav class="shell nav"><a class="brand" href="../../index.html"><span class="brand-mark">◇</span>TDO // DEMO</a></nav></header><main class="shell doc-layout"><aside class="toc"><strong>Space Fleet</strong><a href="#opis">Opis</a><a href="#start">Uruchomienie</a><a href="#scenariusz">Scenariusz</a><a href="#api">API</a></aside><article class="doc"><div class="eyebrow">Demo prowadzącego</div><h1>ASP.NET Core + MySQL</h1><p class="lead">Małe API floty kosmicznej przygotowane do demonstracji Dockerfile, sieci, wolumenu, healthcheck i Compose.</p><section id="opis"><h2>Co zawiera projekt</h2><ul><li>.NET 10 Minimal API i Entity Framework Core,</li><li>MySQL 8.4 z trwałym wolumenem,</li><li>CRUD statków pod <code>/api/spaceships</code>,</li><li>endpoint <code>/health</code> i dokument OpenAPI,</li><li>wieloetapowy Dockerfile uruchamiany bez uprawnień root.</li></ul></section><section id="start"><h2>Uruchomienie</h2><pre><code>cd demos/dotnet-mysql
+cp .env.example .env
+docker compose up --build -d
+docker compose ps
+docker compose logs -f api</code></pre><p>API działa na <code>localhost:8080</code>, a MySQL jest dostępny dla DataGrip na <code>localhost:3307</code>.</p></section><section id="scenariusz"><h2>Scenariusz demonstracji</h2><ol><li>Uruchom sam MySQL poleceniem <code>docker run</code>.</li><li>Połącz DataGrip z opublikowanym portem.</li><li>Zbuduj obraz API i pokaż warstwy.</li><li>Uruchom API w tej samej sieci i wyjaśnij, dlaczego hostem jest nazwa bazy.</li><li>Usuń kontenery, zachowując wolumen.</li><li>Odtwórz cały układ przez Compose.</li><li>Pokaż healthcheck, logi, exec i inspect.</li></ol></section><section id="api"><h2>Adresy</h2><pre><code>GET    /health
+GET    /api/spaceships
+GET    /api/spaceships/{id}
+POST   /api/spaceships
+PUT    /api/spaceships/{id}
+DELETE /api/spaceships/{id}</code></pre><p>Gotowe żądania znajdują się w pliku <code>SpaceFleet.http</code>.</p></section></article></main></body></html>
+

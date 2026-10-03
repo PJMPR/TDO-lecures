@@ -1,0 +1,12 @@
+.idea/
+.vscode/
+.DS_Store
+node_modules/
+dist/
+target/
+bin/
+obj/
+.env
+*.user
+*.suo
+

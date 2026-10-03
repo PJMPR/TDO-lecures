@@ -1,0 +1,11 @@
+services:
+  db:
+    # image, environment, volume, healthcheck
+  api:
+    # build, environment, depends_on
+  frontend:
+    # build, ports, depends_on
+
+volumes:
+  # dane PostgreSQL
+

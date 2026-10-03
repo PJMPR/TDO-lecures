@@ -1,0 +1,109 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Wykład o kontenerach Docker i Docker Compose."><title>Docker · Technologie DevOps</title><link rel="stylesheet" href="slides.css"></head><body><main class="deck">
+<section class="slide" data-title="Kontenery Docker"><div class="content"><div class="kicker">Technologie DevOps // Wykład 01</div><h1>Kontenery <span class="accent">Docker</span></h1><p>Obrazy, kontenery, sieci oraz Docker Compose — od mechanizmu systemu operacyjnego do kompletnego środowiska aplikacji.</p></div></section>
+<section class="slide" data-title="U mnie działa"><div class="content"><div class="kicker">Problem 01</div><div class="huge">„U mnie<br><span class="orange">działa.</span>”</div><p>Inna wersja środowiska, brak zależności, odmienna konfiguracja i ręczne kroki tworzą niepowtarzalne wdrożenia.</p></div></section>
+<section class="slide" data-title="Idea konteneryzacji"><div class="content"><div class="kicker">Model mentalny</div><h2>Pakujemy proces razem z jego środowiskiem</h2><div class="flow"><div class="node">Kod</div><div class="arrow">+</div><div class="node">Runtime</div><div class="arrow">+</div><div class="node">Biblioteki</div><div class="arrow">=</div><div class="node">Obraz</div></div></div></section>
+<section class="slide" data-title="Skąd się wzięły kontenery"><div class="content"><div class="kicker">Krótka historia izolacji</div><h2>Kontenery nie pojawiły się nagle</h2><div class="timeline"><div><strong>1979</strong><span><code>chroot</code> ogranicza widok systemu plików procesu.</span></div><div><strong>lata 2000.</strong><span>Jails, Zones i maszyny wirtualne popularyzują izolację usług.</span></div><div><strong>2006–2008</strong><span>cgroups i namespaces stają się fundamentem kontenerów Linuksa.</span></div><div><strong>2013</strong><span>Docker upraszcza budowanie, dystrybucję i uruchamianie obrazów.</span></div><div><strong>2015</strong><span>OCI standaryzuje format obrazu i uruchamianie kontenerów.</span></div></div></div></section>
+<section class="slide" data-title="Ekonomia serwerów"><div class="content"><div class="kicker">Dlaczego branża tego potrzebowała</div><h2>Płacimy także za niewykorzystane zasoby</h2><div class="three"><div class="panel"><h3>Serwer fizyczny</h3><p>Kupowany pod obciążenie szczytowe. Przez większość czasu część CPU i RAM pozostaje niewykorzystana.</p></div><div class="panel"><h3>Maszyna wirtualna</h3><p>Lepsza konsolidacja, ale każda VM utrzymuje własny system operacyjny i rezerwuje zasoby.</p></div><div class="panel"><h3>Kontener</h3><p>Wspólne jądro oznacza mniejszy narzut, większą gęstość usług i szybsze skalowanie.</p></div></div><p class="note">Koszt to nie tylko zakup serwera: energia, chłodzenie, miejsce, licencje, utrzymanie i czas administratorów.</p></div></section>
+<section class="slide" data-title="VM kontra kontener"><div class="content"><div class="kicker">Izolacja</div><h2>VM kontra kontener</h2><table class="comparison"><tr><th></th><th>Maszyna wirtualna</th><th>Kontener</th></tr><tr><td>System gościa</td><td>Pełny</td><td>Współdzielone jądro hosta</td></tr><tr><td>Start</td><td>Zwykle wolniejszy</td><td>Zwykle sekundy lub mniej</td></tr><tr><td>Rozmiar</td><td>GB</td><td>MB–GB</td></tr><tr><td>Granica izolacji</td><td>Hypervisor</td><td>Mechanizmy jądra</td></tr></table></div></section>
+<section class="slide" data-title="Kontener to proces"><div class="content"><div class="kicker">Ważne</div><h2>Kontener to izolowany proces</h2><ul><li>ma własny widok procesów, sieci i systemu plików,</li><li>korzysta z jądra systemu gospodarza,</li><li>nie jest domyślnie granicą bezpieczeństwa równą VM,</li><li>po zatrzymaniu procesu głównego kontener kończy pracę.</li></ul></div></section>
+<section class="slide" data-title="Od definicji do procesu"><div class="content"><div class="kicker">Podstawowy przepływ</div><h2>Definicja staje się procesem</h2><div class="flow"><div class="node">Dockerfile</div><div class="arrow">→ build →</div><div class="node">Image</div><div class="arrow">→ run →</div><div class="node">Container</div></div></div></section>
+<section class="slide" data-title="Dlaczego Linux"><div class="content"><div class="kicker">Pod maską</div><h2>Dlaczego głównie Linux?</h2><p>Docker wykorzystuje mechanizmy jądra Linuksa. Jądro tworzy izolację i limity — Docker dostarcza model obrazów, API i narzędzia.</p><div class="flow"><div class="node">namespaces</div><div class="node">cgroups</div><div class="node">capabilities</div><div class="node">overlayfs</div></div></div></section>
+<section class="slide" data-title="Namespaces"><div class="content"><div class="kicker">Jądro Linuksa / 01</div><h2>Namespaces zmieniają widok świata</h2><ul><li><strong>PID</strong> — procesy,</li><li><strong>NET</strong> — interfejsy, routing i porty,</li><li><strong>MNT</strong> — punkty montowania,</li><li><strong>UTS</strong> — nazwa hosta,</li><li><strong>USER</strong> — mapowanie użytkowników.</li></ul></div></section>
+<section class="slide" data-title="Cgroups"><div class="content"><div class="kicker">Jądro Linuksa / 02</div><h2>Cgroups mierzą i ograniczają</h2><div class="three"><div class="panel"><h3>CPU</h3><p>udziały i limity</p></div><div class="panel"><h3>Pamięć</h3><p>limit i reakcja na przekroczenie</p></div><div class="panel"><h3>I/O</h3><p>kontrola dostępu do urządzeń</p></div></div></div></section>
+<section class="slide" data-title="Warstwy"><div class="content"><div class="kicker">Jądro Linuksa / 03</div><div class="two"><div><h2>Warstwy są współdzielone</h2><p>Obraz to stos niezmiennych warstw. Dwa kontenery uruchomione z tego samego obrazu współdzielą warstwy obrazu, ale każdy otrzymuje własną cienką warstwę zapisu.</p><p class="note">Zmiana pliku nie modyfikuje obrazu. Mechanizm copy-on-write kopiuje zmieniany plik do warstwy kontenera.</p></div><div class="layer-stack" aria-label="Schemat warstw obrazu i kontenera"><div class="writable">warstwa kontenera<br><small>zapis / copy-on-write</small></div><div>kod aplikacji<br><small>tylko odczyt</small></div><div>biblioteki i runtime<br><small>tylko odczyt, współdzielone</small></div><div>bazowy system plików<br><small>tylko odczyt, współdzielony</small></div><span>jądro hosta — poza obrazem</span></div></div></div></section>
+<section class="slide" data-title="Docker na Windows"><div class="content"><div class="kicker">Windows</div><h2>Są także kontenery Windows</h2><div class="two"><div class="panel"><h3>Linux containers</h3><p>Na Windows korzystają z jądra Linuksa dostarczanego przez WSL 2. To najczęstszy tryb pracy Docker Desktop.</p><code>eclipse-temurin:21-jre</code></div><div class="panel"><h3>Windows containers</h3><p>Korzystają z jądra Windows i obrazów Windows Server. Wymagają zgodnego hosta Windows; nie uruchomimy ich natywnie na jądrze Linuksa.</p><code>mcr.microsoft.com/windows/nanoserver</code></div></div><p class="note">Obraz musi pasować do rodziny jądra hosta. Docker Desktop pozwala przełączać tryb Linux/Windows containers.</p></div></section>
+<section class="slide" data-title="Czym jest WSL"><div class="content"><div class="kicker">Windows Subsystem for Linux</div><h2>Czym jest WSL?</h2><p>Środowiskiem umożliwiającym uruchamianie dystrybucji i narzędzi Linuksa na Windows. WSL 2 używa prawdziwego jądra Linuksa.</p><pre><code>wsl --install
+wsl --status
+wsl --list --verbose</code></pre></div></section>
+<section class="slide" data-title="Przepływ Windows"><div class="content"><div class="kicker">Architektura lokalna</div><h2>Od terminala do kontenera</h2><div class="flow"><div class="node">docker CLI</div><div class="arrow">→</div><div class="node">Docker Engine / WSL 2</div><div class="arrow">→</div><div class="node">Linux container</div></div><p class="note">Kod przechowywany w systemie plików WSL zwykle działa wydajniej niż kod montowany z dysku Windows.</p></div></section>
+<section class="slide" data-title="Obraz"><div class="content"><div class="kicker">Image</div><h2>Jak czytać nazwę obrazu?</h2><div class="image-name"><span>docker.io</span><b>/</b><span>library/postgres</span><b>:</b><span>17</span></div><div class="three"><div class="panel"><h3>Registry</h3><p><code>docker.io</code> — serwer przechowujący obrazy. Pominięty oznacza domyślnie Docker Hub.</p></div><div class="panel"><h3>Repository</h3><p><code>library/postgres</code> — nazwa i przestrzeń obrazu. <code>library</code> oznacza Docker Official Image.</p></div><div class="panel"><h3>Tag</h3><p><code>17</code> — wariant lub wersja. Brak tagu oznacza <code>latest</code>, a nie „najnowszy bezpieczny”.</p></div></div><p><code>postgres:17</code> · <code>eclipse-temurin:21-jre</code> · <code>ghcr.io/acme/api:1.4.2</code></p></div></section>
+<section class="slide" data-title="Warstwy i cache"><div class="content"><div class="kicker">Warstwy i cache</div><h2>Kolejność instrukcji ma znaczenie</h2><p>Rzadko zmieniające się zależności umieszczamy przed często zmienianym kodem.</p><pre><code>COPY pom.xml .
+RUN mvn dependency:go-offline
+COPY src ./src
+RUN mvn package</code></pre></div></section>
+<section class="slide" data-title="Rejestry obrazów"><div class="content"><div class="kicker">Dystrybucja</div><h2>Skąd pobieramy obrazy?</h2><div class="three"><div class="panel"><h3>Docker Hub</h3><p>publiczne i oficjalne obrazy</p></div><div class="panel"><h3>GHCR</h3><p>GitHub Container Registry</p></div><div class="panel"><h3>Prywatny registry</h3><p>obrazy organizacji</p></div></div><p><code>registry/repository:tag</code> · tag może się zmienić, digest wskazuje konkretną treść.</p></div></section>
+<section class="slide" data-title="Dockerfile"><div class="content"><div class="kicker">Dockerfile</div><h2>Przepis na obraz</h2><pre><code>FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY target/app.jar app.jar
+EXPOSE 8080
+USER 10001
+ENTRYPOINT ["java", "-jar", "app.jar"]</code></pre><p class="source-links">Obraz bazowy: <a href="https://hub.docker.com/_/eclipse-temurin" target="_blank" rel="noreferrer">eclipse-temurin — Docker Official Image</a>. Docker pobierze go z rejestru, jeśli nie ma go lokalnie.</p></div></section>
+<section class="slide" data-title="Multi-stage"><div class="content"><div class="kicker">Wielostopniowe budowanie</div><h2>Narzędzia budujące nie muszą trafić do wyniku</h2><pre><code>FROM maven:3-eclipse-temurin-21 AS build
+WORKDIR /src
+COPY . .
+RUN mvn -q -DskipTests package
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=build /src/target/*.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]</code></pre><p class="source-links">Źródła obrazów: <a href="https://hub.docker.com/_/maven" target="_blank" rel="noreferrer">maven</a> — etap budowania · <a href="https://hub.docker.com/_/eclipse-temurin" target="_blank" rel="noreferrer">eclipse-temurin</a> — mały obraz uruchomieniowy.</p></div></section>
+<section class="slide" data-title="Build context"><div class="content"><div class="kicker">Kontekst budowania</div><h2>Docker widzi tylko przekazany katalog</h2><pre><code># .dockerignore
+target
+.git
+.idea
+.env</code></pre><p>Nie wysyłaj do silnika sekretów, repozytorium ani zbędnych artefaktów.</p></div></section>
+<section class="slide" data-title="Budowanie obrazu"><div class="content"><div class="kicker">CLI</div><h2>Zbuduj, oznacz, sprawdź</h2><pre><code>docker build -t space-api:1.0 .
+docker image ls
+docker image inspect space-api:1.0
+docker history space-api:1.0</code></pre><div class="demo-cue"><strong>DEMO NA ŻYWO</strong><span>Zbuduj obraz API, pokaż cache warstw, listę obrazów i <code>docker history</code>.</span></div></div></section>
+<section class="slide" data-title="Kontener"><div class="content"><div class="kicker">Container</div><h2>Instancja obrazu w ruchu</h2><p>Kontener ma własną konfigurację, sieć i warstwę zapisu. Usunięcie kontenera usuwa tę warstwę — dane trwałe wymagają wolumenu.</p></div></section>
+<section class="slide" data-title="docker run"><div class="content"><div class="kicker">Uruchomienie</div><h2><code>docker run</code> łączy kilka operacji</h2><pre><code>docker run -d --name space-api \
+  -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=docker \
+  space-api:1.0</code></pre><p><code>-d</code> tło · <code>--name</code> nazwa · <code>-p</code> port · <code>-e</code> zmienna</p><div class="demo-cue"><strong>DEMO NA ŻYWO</strong><span>Uruchom API, sprawdź <code>ps</code>, logi oraz endpoint HTTP.</span></div></div></section>
+<section class="slide" data-title="Porty"><div class="content"><div class="kicker">Sieć</div><h2>Port hosta ≠ port kontenera</h2><div class="flow"><div class="node">localhost:8088<br><small>host</small></div><div class="arrow">-p 8088:8080</div><div class="node">container:8080<br><small>proces</small></div></div><p><code>EXPOSE</code> dokumentuje port. Dopiero <code>-p</code> udostępnia go hostowi.</p><div class="demo-cue"><strong>DEMO NA ŻYWO</strong><span>Uruchom ten sam obraz z innym portem hosta i porównaj adresy.</span></div></div></section>
+<section class="slide" data-title="Sieci"><div class="content"><div class="kicker">Komunikacja</div><h2>W jednej sieci używamy nazw</h2><pre><code>docker network create mission-net
+docker run --network mission-net --name db mysql:8
+docker run --network mission-net --name api space-api</code></pre><p>API łączy się z <code>db:3306</code>, nie z <code>localhost:3306</code>.</p><div class="demo-cue"><strong>DEMO NA ŻYWO</strong><span>Pokaż błąd z <code>localhost</code>, potem wspólną sieć i rozwiązywanie nazwy <code>db</code>.</span></div></div></section>
+<section class="slide" data-title="Wolumeny"><div class="content"><div class="kicker">Dane trwałe</div><h2>Named volume żyje niezależnie od kontenera</h2><div class="two"><div><pre><code>docker volume create mysql-data
+
+docker run --name db \
+  -v mysql-data:/var/lib/mysql \
+  mysql:8</code></pre></div><div><ul><li><strong><code>mysql-data</code></strong> — nazwa nadana przez nas,</li><li><strong><code>/var/lib/mysql</code></strong> — miejsce danych wewnątrz kontenera,</li><li>Docker wybiera fizyczną lokalizację na hoście,</li><li>usunięcie kontenera nie usuwa named volume,</li><li>nowy kontener może podłączyć ten sam wolumen.</li></ul></div></div><p class="note">Named volume wybieramy dla danych aplikacji. Bind mount jest wygodniejszy, gdy człowiek ma edytować pliki z hosta, np. kod źródłowy.</p></div></section>
+<section class="slide" data-title="Cykl życia wolumenu"><div class="content"><div class="kicker">Named volume / cykl życia</div><h2>Kontener można wymienić bez utraty bazy</h2><div class="flow"><div class="node">kontener DB v1</div><div class="arrow">→ zapis →</div><div class="node accent-border">mysql-data</div><div class="arrow">← odczyt ←</div><div class="node">kontener DB v2</div></div><pre><code>docker rm -f db                 # dane zostają
+docker volume ls               # volume nadal istnieje
+docker run --name db-new \
+  -v mysql-data:/var/lib/mysql mysql:8
+
+docker volume rm mysql-data    # jawnie usuwa dane</code></pre><div class="demo-cue"><strong>DEMO NA ŻYWO</strong><span>Dodaj rekord, usuń kontener bazy, uruchom nowy z tym samym volume i pokaż, że rekord pozostał.</span></div></div></section>
+<section class="slide" data-title="Podstawowe komendy"><div class="content"><div class="kicker">Ściąga</div><h2>Najczęściej używane polecenia</h2><div class="two"><pre><code>docker ps -a
+docker logs -f NAME
+docker exec -it NAME sh
+docker inspect NAME</code></pre><pre><code>docker stop NAME
+docker rm NAME
+docker image ls
+docker volume ls</code></pre></div><div class="demo-cue"><strong>DEMO NA ŻYWO</strong><span>Wykonaj kolejno <code>ps</code>, <code>logs</code>, <code>exec</code> i <code>inspect</code> na działającym API.</span></div></div></section>
+<section class="slide" data-title="Diagnostyka"><div class="content"><div class="kicker">Gdy nie działa</div><h2>Obserwuj, zanim zmienisz</h2><ol><li><code>docker ps -a</code> — czy proces nadal działa?</li><li><code>docker logs</code> — co zgłosiła aplikacja?</li><li><code>docker inspect</code> — jaka jest konfiguracja?</li><li><code>docker exec</code> — co widać od środka?</li></ol></div></section>
+<section class="slide" data-title="Docker Compose"><div class="content"><div class="kicker">Docker Compose</div><h2>Opis całego środowiska jako kod</h2><p>Jeden plik deklaruje usługi, obrazy, sposób budowania, sieci, wolumeny, porty, zmienne i warunki gotowości.</p><div class="flow"><div class="node">frontend</div><div class="arrow">→</div><div class="node">api</div><div class="arrow">→</div><div class="node">database</div></div></div></section>
+<section class="slide" data-title="Anatomia Compose"><div class="content"><div class="kicker">Definicja</div><h2>Anatomia <code>compose.yaml</code></h2><pre><code>services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: missions
+      POSTGRES_PASSWORD: DB_PASSWORD_FROM_ENV
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:</code></pre></div></section>
+<section class="slide" data-title="Trzy usługi"><div class="content"><div class="kicker">System</div><h2>Trzy usługi, jedna sieć projektu</h2><div class="three"><div class="panel"><h3>frontend</h3><p>publikuje port dla przeglądarki</p></div><div class="panel"><h3>api</h3><p>wywołuje bazę po nazwie <code>db</code></p></div><div class="panel"><h3>db</h3><p>zapisuje dane w wolumenie</p></div></div></div></section>
+<section class="slide" data-title="Konfiguracja"><div class="content"><div class="kicker">Konfiguracja</div><h2>Nie wszystko powinno być w obrazie</h2><ul><li>ustawienia przekazujemy przy uruchomieniu,</li><li>sekretów nie commitujemy do repozytorium,</li><li>sieć domyślna daje DNS po nazwie usługi,</li><li>wolumen oddziela cykl życia danych od kontenera.</li></ul></div></section>
+<section class="slide" data-title="Gotowość usług"><div class="content"><div class="kicker">Gotowość</div><h2>Uruchomiony proces nie zawsze jest gotowy</h2><pre><code>healthcheck:
+  test: ["CMD-SHELL", "pg_isready -U app"]
+  interval: 5s
+  timeout: 3s
+  retries: 10
+
+depends_on:
+  db:
+    condition: service_healthy</code></pre></div></section>
+<section class="slide" data-title="Komendy Compose"><div class="content"><div class="kicker">CLI</div><h2>Cykl życia środowiska</h2><pre><code>docker compose config
+docker compose up --build -d
+docker compose ps
+docker compose logs -f api
+docker compose down
+docker compose down -v   # usuwa też dane!</code></pre><div class="demo-cue"><strong>DEMO NA ŻYWO</strong><span>Usuń ręcznie uruchomione elementy i odtwórz cały system jednym poleceniem Compose.</span></div></div></section>
+<section class="slide" data-title="Zagrożenia"><div class="content"><div class="kicker">Bezpieczeństwo</div><h2>Najczęstsze zagrożenia</h2><div class="two"><ul><li>niezaufane lub stare obrazy,</li><li>sekrety w warstwach obrazu,</li><li>proces działający jako root,</li><li>nadmiar capabilities.</li></ul><ul><li>montowanie socketu Dockera,</li><li>publiczne porty bazy,</li><li>brak limitów zasobów,</li><li>podatne zależności.</li></ul></div></div></section>
+<section class="slide" data-title="Dobre praktyki"><div class="content"><div class="kicker">Checklista</div><h2>Buduj mniejszą powierzchnię ataku</h2><ul><li>używaj minimalnych, oficjalnych obrazów i przypinaj wersje,</li><li>uruchamiaj proces jako użytkownik bez uprawnień root,</li><li>nie zapisuj sekretów w Dockerfile ani repozytorium,</li><li>skanuj obrazy i regularnie je przebudowuj,</li><li>publikuj tylko potrzebne porty.</li></ul></div></section>
+<section class="slide" data-title="Podsumowanie"><div class="content"><div class="kicker">Podsumowanie</div><h2>Obraz opisuje. Kontener wykonuje. Compose łączy.</h2><div class="flow"><div class="node">Dockerfile</div><div class="arrow">→</div><div class="node">Image</div><div class="arrow">→</div><div class="node">Container</div><div class="arrow">→</div><div class="node">System</div></div></div></section>
+</main><footer class="hud"><a href="../../index.html" aria-label="Powrót do strony kursu">TDO</a><button data-prev aria-label="Poprzedni slajd">Wstecz</button><div class="progress" aria-hidden="true"><span></span></div><button data-next aria-label="Następny slajd">Dalej</button><div class="slide-number" aria-live="polite"></div></footer><script src="slides.js"></script></body></html>

@@ -1,0 +1,13 @@
+server {
+  listen <PORT>;
+  root <KATALOG_Z_PLIKAMI_ANGULAR>;
+  index index.html;
+
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  location /api/ {
+    proxy_pass http://<NAZWA_USLUGI_API>:<PORT_API>;
+  }
+}

@@ -1,0 +1,14 @@
+FROM <obraz z Mavenem i JDK 21> AS build
+WORKDIR <katalog>
+COPY <pliki potrzebne do pobrania zależności>
+RUN <pobierz zależności>
+COPY <kod źródłowy>
+RUN <zbuduj JAR>
+
+FROM <obraz z JRE 21>
+WORKDIR <katalog>
+COPY --from=build <JAR> <nazwa docelowa>
+EXPOSE <port>
+USER <użytkownik bez root>
+ENTRYPOINT [<polecenie>]
+
