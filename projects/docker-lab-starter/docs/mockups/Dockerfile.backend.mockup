@@ -1,14 +1,13 @@
-FROM <obraz z Mavenem i JDK 21> AS build
+FROM <obraz .NET SDK 10> AS build
 WORKDIR <katalog>
-COPY <pliki potrzebne do pobrania zależności>
-RUN <pobierz zależności>
+COPY <csproj i wygenerowany packages.lock.json>
+RUN <dotnet restore w trybie locked>
 COPY <kod źródłowy>
-RUN <zbuduj JAR>
+RUN <dotnet publish bez ponownego restore>
 
-FROM <obraz z JRE 21>
+FROM <obraz ASP.NET Core 10>
 WORKDIR <katalog>
-COPY --from=build <JAR> <nazwa docelowa>
+COPY --from=build <wynik publish> <katalog docelowy>
 EXPOSE <port>
 USER <użytkownik bez root>
-ENTRYPOINT [<polecenie>]
-
+ENTRYPOINT ["dotnet", "MissionControl.Api.dll"]

@@ -1,0 +1,2 @@
+.slide pre>code.shiki,.ci-lab pre>code.shiki{color:#e1e4e8}
+.slide pre:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}

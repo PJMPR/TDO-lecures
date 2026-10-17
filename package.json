@@ -1,0 +1,21 @@
+{
+  "name": "tdo-course-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node scripts/build-site.mjs",
+    "screenshots": "node scripts/capture-screenshots.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "@shikijs/colorized-brackets": "4.5.0",
+    "parse5": "8.0.1",
+    "playwright": "1.64.0",
+    "shiki": "4.5.0",
+    "yaml": "2.9.1"
+  }
+}

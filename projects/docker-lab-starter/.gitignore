@@ -1,7 +1,11 @@
-backend/target/
+**/bin/
+**/obj/
+**/TestResults/
 frontend/node_modules/
 frontend/dist/
+frontend/out-tsc/
+frontend/.angular/
+frontend/test-results/
 .env
 .idea/
 .vscode/
-
