@@ -7,5 +7,4 @@ services:
     # build, ports, depends_on
 
 volumes:
-  # dane PostgreSQL
-
+  # dane MySQL

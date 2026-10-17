@@ -1,0 +1,17 @@
+.presentation-picker{position:relative;flex:none;color:var(--text);font:700 14px/1.4 "Cascadia Code",Consolas,monospace;letter-spacing:0;text-transform:none}
+.presentation-picker>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:3px;background:var(--panel);cursor:pointer;list-style:none;white-space:nowrap}
+.presentation-picker>summary::-webkit-details-marker{display:none}
+.presentation-picker>summary::after{content:"▾";color:var(--cyan)}
+.presentation-picker[open]>summary{border-color:var(--cyan)}
+.presentation-picker[open]>summary::after{content:"▴"}
+.presentation-picker>nav{position:absolute;right:0;top:calc(100% + 8px);z-index:30;width:min(320px,calc(100vw - 32px));padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--panel);box-shadow:0 16px 48px rgba(0,0,0,.5)}
+.presentation-picker>nav a{display:block;min-height:44px;padding:12px;color:var(--muted);border-left:3px solid transparent;text-decoration:none;font:inherit;letter-spacing:0;text-transform:none}
+.presentation-picker>nav a:hover{color:var(--text);background:rgba(88,230,255,.08)}
+.presentation-picker>nav a[aria-current="page"]{color:var(--cyan);border-left-color:var(--cyan);background:rgba(88,230,255,.08)}
+.presentation-picker>summary:focus-visible,.presentation-picker>nav a:focus-visible,.hud button:focus-visible,.hud>a:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.nav>.presentation-picker{margin-left:auto}
+.hud .presentation-picker{position:static}
+.hud .presentation-picker>nav{top:auto;bottom:calc(100% + 12px);left:16px;right:auto}
+.hud button,.hud>a{display:inline-flex;align-items:center;min-height:36px;padding:4px}
+@media(max-width:760px){.hud{flex-wrap:wrap;gap:8px 12px;padding:8px 12px}.hud .progress{order:2;flex:1 0 100%}.hud .slide-number{margin-left:auto}.slide{padding-bottom:108px}}
+@media(max-width:560px){.nav{gap:8px}.nav .brand{font-size:.82rem;letter-spacing:.06em}.presentation-picker{font-size:12px}.presentation-picker>summary{gap:8px;padding:8px}.hud{gap:6px 8px;font-size:11px}.hud .slide-number{min-width:52px}.hud button,.hud>a{padding:2px}}

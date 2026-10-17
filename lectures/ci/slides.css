@@ -1,0 +1,224 @@
+.ci-deck {
+  --danger: #ff98a4;
+  font-size: clamp(18px, 1.55vw, 23px);
+}
+
+.ci-deck .slide {
+  padding: 78px clamp(28px, 5vw, 80px) 80px;
+  overflow-y: auto;
+}
+
+.ci-deck .content { width: min(1200px, 100%); }
+.ci-deck h1 { font-size: clamp(3.4rem, 7.2vw, 7rem); }
+.ci-deck h2 {
+  max-width: none;
+  margin: .28em 0 .55em;
+  font-size: clamp(2rem, 3.2vw, 3.2rem);
+  line-height: 1.08;
+}
+.ci-deck h3 { margin: 0 0 .55em; font-size: 1em; }
+.ci-deck p { max-width: 76ch; margin: .8em 0 0; }
+.ci-deck li { margin: .38em 0; }
+.ci-deck ul, .ci-deck ol { margin: .8em 0 0; }
+.ci-deck .lead { font-size: 1.2em; max-width: 58ch; }
+.ci-deck .small { font-size: .85em; }
+.ci-deck .danger, .ci-deck .danger strong { color: var(--danger); }
+.ci-deck a { color: var(--cyan); text-underline-offset: 4px; }
+.ci-deck a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; }
+.ci-deck [aria-disabled="true"] { opacity: .45; pointer-events: none; }
+
+.ci-deck pre {
+  margin: 0;
+  padding: .85em 1em;
+  max-height: none;
+  overflow: auto;
+  white-space: pre;
+  font-size: clamp(1rem, 1.2vw, 1.15rem);
+  line-height: 1.4;
+  tab-size: 2;
+}
+.ci-deck pre > code { display: block; }
+.ci-deck pre + pre { margin-top: .7em; }
+.ci-deck .two { gap: clamp(22px, 3vw, 44px); align-items: start; }
+.ci-deck .two > *, .ci-deck .three > *, .ci-deck .code-and-notes > * { min-width: 0; }
+.ci-deck .code-and-notes {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(24px, 3vw, 44px);
+}
+.ci-deck .panel { padding: .9em 1em; }
+.ci-deck .panel p:first-of-type { margin-top: 0; }
+.ci-deck .comparison { font-size: .88em; }
+.ci-deck .comparison td, .ci-deck .comparison th { padding: .55em .6em; vertical-align: top; }
+.ci-deck .comparison code { font-size: .92em; }
+.ci-deck .source-links { font-size: .68em; overflow-wrap: anywhere; }
+.ci-deck .capture {
+  max-width: none;
+  padding: .55em 0 .1em .85em;
+  border-left: 2px solid var(--cyan);
+  color: var(--muted);
+  font-size: .76em;
+}
+.ci-deck .capture::before { content: "Widok · "; color: var(--cyan); font-weight: 700; }
+.ci-deck .screenshot-slide .content {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+}
+.ci-deck .screenshot-slide h2 { margin: 0; overflow-wrap: anywhere; }
+.ci-deck .screenshot {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+}
+.ci-deck .screenshot-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 2px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+.ci-deck .screenshot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.ci-deck .screenshot figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: .35em 1em;
+  color: var(--muted);
+  font-size: .76em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.ci-deck .screenshot figcaption span { flex: 1 1 40ch; }
+.ci-deck .screenshot figcaption a { flex: none; }
+.ci-deck .flow { gap: 10px; margin: 1em 0; }
+.ci-deck .flow-line { flex-wrap: nowrap; }
+.ci-deck .node { font-size: .88em; padding: .7em .9em; }
+.ci-deck .node small { color: var(--muted); font-weight: 400; }
+.ci-deck .flow-line .node { flex: 1; min-width: 0; }
+.ci-deck .section-opening h2 { font-size: clamp(2.8rem, 5.2vw, 5.4rem); max-width: 22ch; }
+.ci-deck .section-topics { display: flex; flex-wrap: wrap; gap: .7em; margin: 1.5em 0; }
+.ci-deck .section-topics span {
+  padding: .4em .7em;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--cyan);
+  font-size: .85em;
+}
+
+.ci-deck .lecture-nav {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 60px;
+  padding: 8px 22px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(5, 8, 13, .96);
+}
+.ci-deck .section-picker > summary { min-width: 290px; }
+.ci-deck .section-picker > nav {
+  left: 0;
+  right: auto;
+  width: min(740px, calc(100vw - 44px));
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 8px;
+}
+.ci-deck .section-picker > nav a[aria-current="location"] {
+  color: var(--cyan);
+  border-left-color: var(--cyan);
+  background: rgba(88, 230, 255, .08);
+}
+.ci-deck .section-position, .ci-deck .section-jumps {
+  font: 700 12px/1.4 "Cascadia Code", Consolas, monospace;
+  color: var(--muted);
+}
+.ci-deck .section-jumps { margin-left: auto; display: flex; gap: 20px; }
+.ci-deck .section-jumps a { text-decoration: none; min-height: 36px; display: inline-flex; align-items: center; }
+
+.ci-deck .ring-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: center; }
+.ci-deck .sdlc-ring { display: block; width: min(100%, 450px); max-height: 57vh; margin: auto; }
+.ci-deck .ring-labels { fill: #101923; font: 700 18px/1.2 Inter, "Segoe UI", sans-serif; }
+.ci-deck .ring-number { font-size: 22px; font-weight: 900; }
+.ci-deck .ring-center { fill: var(--text); font: 750 23px/1.2 Inter, "Segoe UI", sans-serif; }
+.ci-deck .ring-return { fill: var(--cyan); font-size: 19px; }
+.ci-deck .git-graph {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 40vh;
+  margin: .3em 0;
+  font: 700 21px/1.3 "Cascadia Code", Consolas, monospace;
+}
+.ci-deck .git-graph path { fill: none; stroke-width: 4; stroke-linecap: round; }
+.ci-deck .main-line { stroke: var(--cyan); }
+.ci-deck .feature-line { stroke: var(--orange); }
+.ci-deck .develop-line { stroke: #bd9cff; }
+.ci-deck .release-line { stroke: #7de3a3; }
+.ci-deck .return-line { stroke-dasharray: 8 6; }
+.ci-deck .transfer-line { stroke: var(--muted); stroke-dasharray: 5 7; }
+.ci-deck .main-dot, .ci-deck .main-text { fill: var(--cyan); }
+.ci-deck .feature-dot, .ci-deck .feature-text { fill: var(--orange); }
+.ci-deck .develop-dot, .ci-deck .develop-text { fill: #bd9cff; }
+.ci-deck .release-dot, .ci-deck .release-text { fill: #7de3a3; }
+.ci-deck .commit-text, .ci-deck .caption-text { fill: var(--text); font-size: 18px; }
+.ci-deck .caption-text { font-weight: 400; }
+
+@media (max-width: 760px) {
+  .ci-deck .slide { padding: 90px 22px 122px; }
+  .ci-deck h2 { font-size: clamp(1.8rem, 6vw, 2.6rem); }
+  .ci-deck .section-opening h2 { font-size: clamp(2.4rem, 8vw, 4rem); }
+  .ci-deck .two, .ci-deck .three, .ci-deck .code-and-notes { grid-template-columns: 1fr; }
+  .ci-deck .flow-line { flex-wrap: wrap; }
+  .ci-deck .flow-line .node { flex: 1 1 36%; }
+  .ci-deck .lecture-nav { gap: 8px; padding: 8px 12px; }
+  .ci-deck .section-picker { flex: 1; min-width: 0; }
+  .ci-deck .section-picker > summary { min-width: 0; white-space: normal; }
+  .ci-deck .section-picker > nav { width: min(620px, calc(100vw - 24px)); }
+  .ci-deck .section-jumps { gap: 10px; white-space: nowrap; }
+  .ci-deck .section-position { display: none; }
+  .ci-deck .comparison { font-size: .78em; }
+  .ci-deck .comparison th, .ci-deck .comparison td { padding: .5em .3em; overflow-wrap: anywhere; }
+  .ci-deck .git-graph { min-height: 140px; }
+  .ci-deck .sdlc-ring { max-height: none; }
+  .ci-deck .screenshot-slide .content { height: auto; grid-template-rows: auto auto auto; }
+  .ci-deck .screenshot { grid-template-rows: auto auto; }
+  .ci-deck .screenshot img { height: auto; max-height: none; }
+}
+
+@media (max-width: 500px) {
+  .ci-deck .section-picker > nav { grid-template-columns: 1fr; }
+  .ci-deck .section-jumps { font-size: 10px; }
+}
+
+@media print {
+  html, body.ci-deck { height: auto; overflow: visible; background: #fff; color: #111; }
+  .ci-deck .deck { height: auto; }
+  .ci-deck .slide { display: block; height: auto; min-height: 95vh; break-after: page; overflow: visible; }
+  .ci-deck .hud, .ci-deck .lecture-nav { display: none; }
+  .ci-deck pre { white-space: pre-wrap; }
+  .ci-deck .screenshot-slide .content { height: auto; grid-template-rows: auto auto auto; }
+  .ci-deck .screenshot { grid-template-rows: auto auto; }
+  .ci-deck .screenshot img { height: auto; max-height: 70vh; }
+}

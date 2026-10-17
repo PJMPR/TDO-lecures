@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Laboratorium 02: GitHub Actions od pierwszego workflow do CI .NET i Angular, ochrony PR, cache, przepływu danych, wydań PDF LaTeX i macierzy.">
+  <title>Laboratorium 02 · CI i GitHub Actions</title>
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <link rel="stylesheet" href="../../assets/css/code-highlighting.css">
+  <link rel="stylesheet" href="lab.css">
+</head>
+<body>
+<a class="skip-link" href="#tresc">Przejdź do instrukcji</a>
+<header class="site-header">
+  <nav class="shell nav" aria-label="Główna nawigacja">
+    <a class="brand" href="../../index.html"><span class="brand-mark" aria-hidden="true">◇</span>TDO // LAB 02</a>
+    <div class="nav-links">
+      <a href="#przygotowanie">Przygotowanie</a>
+      <a href="#zadanie-01">Zadania</a>
+      <a href="#weryfikacja">Kryteria</a>
+      <a href="../../lectures/ci/index.html">Wykład 02</a>
+    </div>
+  </nav>
+</header>
+<main class="shell doc-layout">
+  <aside class="toc">
+    <details class="toc-fold" data-lab-toc open>
+      <summary>Plan misji</summary>
+    <nav aria-label="Spis treści laboratorium">
+      <a href="#cel">Cel i sposób pracy</a>
+      <a href="#przygotowanie">Przygotowanie w domu</a>
+      <a href="#starter">Repozytorium i starter</a>
+      <p class="toc-group">Rdzeń · pierwsze działające CI</p>
+      <a href="#zadanie-01">1. Pierwszy push i logi</a>
+      <a href="#zadanie-02">2. Checkout i SDK</a>
+      <a href="#zadanie-03">3. Gałąź i pull request</a>
+      <a href="#zadanie-04">4. Ręczne uruchomienie</a>
+      <a href="#zadanie-05">5. Błąd i adnotacje</a>
+      <a href="#zadanie-06">6. Lockfiles i gotowe testy</a>
+      <a href="#zadanie-07">7. CI backendu</a>
+      <a href="#zadanie-08">8. Równoległy frontend</a>
+      <a href="#zadanie-09">9. Regresja i nieaktualny lockfile</a>
+      <a href="#zadanie-10">10. Raporty mimo błędu</a>
+      <a href="#zadanie-11">11. Vars, secrets, permissions</a>
+      <a href="#zadanie-12">12. Ochrona PR i main</a>
+      <a href="#zadanie-13">13. Cache: cold / warm / nowy lock</a>
+      <p class="toc-group">Rozszerzenie · dane i reużywanie</p>
+      <a href="#zadanie-14">14. Outputs kroków i GITHUB_ENV</a>
+      <a href="#zadanie-15">15. Dane między runnerami</a>
+      <a href="#zadanie-16">16. API GitHuba i zmienione pliki</a>
+      <a href="#zadanie-17">17. Własna composite action</a>
+      <a href="#zadanie-18">18. Reusable workflow backendu</a>
+      <a href="#zadanie-19">19. Warunkowe jobs i stały gate</a>
+      <a href="#zadanie-20">20. Dwa niezależne workflow</a>
+      <a href="#zadanie-21">21. LaTeX: PDF i GitHub Releases</a>
+      <p class="toc-group">Finał · macierze</p>
+      <a href="#zadanie-22">22. Statyczna macierz konfiguracji</a>
+      <a href="#zadanie-23">23. Dynamiczna macierz z JSON</a>
+      <p class="toc-group">Podsumowanie i pomoc</p>
+      <a href="#weryfikacja">Oddanie i kryteria</a>
+      <a href="#diagnostyka">Ściąga diagnostyczna</a>
+      <a href="#pytania">Pytania do samokontroli</a>
+    </nav>
+    </details>
+  </aside>
+  <article class="doc ci-lab" id="tresc" tabindex="-1">
+    <div class="eyebrow">Laboratorium 02 / Continuous Integration</div>
+    <h1>Od pierwszego pusha do wiarygodnego CI</h1>
+    <p class="lead">Kod aplikacji i testy już działają. Zbuduj proces, który sprawdza zmianę, pokazuje przyczynę błędu i nie pozwala scalić niesprawnego kodu. Potem wykorzystaj te same mechanizmy do wydania pracy LaTeX jako PDF.</p>
+
+    <section id="cel">
+      <h2>Cel i sposób pracy</h2>
+      <p>Pracujesz na <strong>.NET 10 + Angular 21 + MySQL 8.4</strong>. Testy HTTP API uruchamiają MySQL przez Testcontainers, a testy interfejsu używają Vitest i symulowanego HTTP. Nie piszesz testów od zera. Nie potrzebujesz Dockerfile aplikacji, Compose, własnej bazy ani prawdziwych sekretów do jej sprawdzenia.</p>
+      <p><strong>Zadania 1–13 to rdzeń</strong>: własny workflow, build, testy, raporty, ochrona repozytorium i cache. <strong>Zadania 14–23 to moduły rozszerzające</strong>: przepływ danych, reużywanie, warunkowe sprawdzanie, publikacja PDF i — jako ostatnie zadania — macierze w osobnym, ręcznym workflow. To bank ćwiczeń na kolejne bloki pracy, nie obietnica wykonania całości w 90 minut.</p>
+      <ul>
+        <li>Wykonuj zadania po kolei. Każde rozwija Twoją konfigurację, zamiast zastępować ją kompletnym rozwiązaniem prowadzącego.</li>
+        <li>Fragmenty oznaczone jako <em>szkielet</em> wymagają uzupełnienia; nie są całym gotowym workflow.</li>
+        <li>Od zadania 3 używaj krótkich gałęzi, PR-ów i małych commitów. Kontrolowane błędy wprowadzaj na gałęzi, nigdy wprost do <code>main</code>.</li>
+        <li>Zapisuj link do <strong>własnego</strong> runa, SHA commita i krótką obserwację. Zielony wynik bez sprawdzenia testów nie jest dowodem ukończenia.</li>
+      </ul>
+      <p><a href="../../lectures/ci/index.html">Wykład 02</a> wyjaśnia pojęcia. Ta strona jest oddzielną instrukcją wykonania laboratorium. Materiały Docker z <a href="../docker/index.html">laboratorium 01</a> dotyczą starszego startera z tagu <code>Z1</code>.</p>
+    </section>
+
+    <section id="przygotowanie">
+      <h2>Przygotowanie w domu — zanim uruchomisz CI</h2>
+      <h3>Konto i uprawnienia na GitHubie</h3>
+      <ul class="checklist">
+        <li>Masz konto GitHub, potwierdzony adres e-mail i działające logowanie. Nie wpisujesz tokenu do adresu repozytorium ani pliku workflow.</li>
+        <li>Potrafisz utworzyć <strong>publiczne</strong> repozytorium na własnym koncie albo w organizacji zajęć. Publiczne oznacza także publiczne logi i artefakty — używaj wyłącznie danych ćwiczeniowych.</li>
+        <li>Masz prawa właściciela/admina do ustawień tego repozytorium: Actions, rulesets/ochrony gałęzi, Variables i Secrets. Jeśli repozytorium kontroluje Classroom lub organizacja, prowadzący musi zapewnić odpowiednie uprawnienia przed tymi zadaniami.</li>
+        <li>W <strong>Settings → Actions → General</strong> Actions są włączone, a polityka repozytorium pozwala użyć wymaganych akcji. Nie włączaj globalnie uprawnień zapisu „na zapas”.</li>
+      </ul>
+      <div class="callout"><strong>Budżet:</strong> standardowe runnery GitHub-hosted w <strong>publicznych repozytoriach</strong> mają bezpłatny czas obliczeniowy Actions — nie jest to stały przydział „darmowych minut”. Większe runnery oraz przechowywanie artefaktów/cache mają osobne zasady i limity. W repozytoriach prywatnych miesięczny przydział zależy od planu. Używaj standardowego <code>ubuntu-24.04</code>, krótkiej retencji i sprawdź ustawienia rozliczeń właściciela repozytorium.</div>
+      <h3>Narzędzia lokalne</h3>
+      <ul>
+        <li><strong>Git</strong> i edytor. VS Code z rozszerzeniem GitHub Actions lub IDE JetBrains pomogą w YAML, podpowiedziach do akcji i expressions; nie zastępują prawdziwego runa.</li>
+        <li><strong>.NET SDK z <code>global.json</code> startera</strong>; uruchamiaj CLI z katalogu tego projektu. Sam runtime .NET nie wystarczy.</li>
+        <li><strong>Node.js z <code>.nvmrc</code> startera i npm</strong>. Jeżeli masz nvm, użyj <code>nvm install</code> i <code>nvm use</code> w katalogu startera. Nie instaluj globalnego Angular CLI zamiast zależności projektu.</li>
+        <li><strong>Docker Engine z kontenerami Linux</strong>. W Rancher Desktop wybierz <strong>dockerd (moby)</strong>, nie containerd; Kubernetes nie jest potrzebny. W Windows przygotuj WSL 2 zgodnie z <a href="../docker/index.html#install">instrukcją środowiska</a>.</li>
+        <li><strong>Opcjonalnie GitHub CLI (<code>gh</code>)</strong>: logowanie, PR-y i pobieranie raportów można też obsłużyć w przeglądarce. W zadaniu o wydaniach wykorzystasz CLI na runnerze.</li>
+      </ul>
+      <p>Potrzebujesz Internetu do pobrania SDK, paczek i obrazów. TeX nie musi być zainstalowany na laptopie: zadanie 21 może kompilować dokument wyłącznie na runnerze.</p>
+      <pre tabindex="0" aria-label="Kontrola narzędzi lokalnych"><code class="language-bash">git --version
+dotnet --version
+node --version
+npm --version
+docker version
+docker info
+docker run --rm hello-world</code></pre>
+      <p><strong>Sprawdź przed zajęciami:</strong> wersje SDK i Node pasują do plików startera, <code>docker version</code> pokazuje klienta <em>i serwer</em>, a kontener kończy się komunikatem powodzenia. Po pobraniu startera wykonaj także lokalne polecenia z zadania 6; wygenerowane lockfiles są Twoją pracą, nie plikami do pobrania od prowadzącego.</p>
+      <details class="solution-reveal command-cheatsheet">
+        <summary>Pomoc przy edycji workflow i diagnostyce lokalnej</summary>
+        <ul>
+          <li>Workflow uruchamia się na systemie wskazanym w <code>runs-on</code>, nie na Twoim laptopie. Wszystkie jobs tego laboratorium korzystają ze standardowego <code>ubuntu-24.04</code>, na którym sprawdzono testy i pakiety TeX. Polecenia workflow to Bash; lokalny PowerShell ma inną składnię zmiennych.</li>
+          <li>YAML używa spacji, nie tabulatorów. Sprawdzaj poziom kluczy: <code>jobs</code>, job, <code>steps</code>, krok. Sam poprawny YAML nie gwarantuje poprawnego schematu Actions.</li>
+          <li>Opcjonalny <a href="https://github.com/rhysd/actionlint">actionlint</a> sprawdza również schemat i expressions GitHub Actions. Zainstaluj go według dokumentacji, zanim użyjesz polecenia <code>actionlint</code>.</li>
+          <li><code>gh auth status</code> sprawdza logowanie CLI; <code>gh run list</code> i <code>gh run view &lt;ID_RUNA&gt; --log-failed</code> pomagają znaleźć nieudany krok. Nie jest to wymagane do pierwszych zadań.</li>
+          <li>Gdy Docker nie odpowiada, sprawdź uruchomiony silnik i <code>docker context show</code>. Nie wyłączaj testów Testcontainers, aby uzyskać zielony wynik.</li>
+        </ul>
+      </details>
+    </section>
+
+    <section id="starter">
+      <h2>Repozytorium i projekt startowy</h2>
+      <p>Przeczytaj <a href="../../projects/docker-lab-starter/README.md">README startera Mission Control</a>. Własne repozytorium ma zawierać <em>zawartość</em> startera w korzeniu, a nie całą stronę kursu z katalogiem <code>projects/</code>.</p>
+      <div class="callout" id="szablon-startowy">
+        <strong>Gotowy starter do pobrania:</strong>
+        <p><a class="button" href="../../assets/downloads/z2-ci-starter.zip" download>Pobierz starter CI (.zip)</a></p>
+        <p>Archiwum zawiera czyste pliki aplikacji, bez historii Git, lockfiles i gotowych workflow. Rozpakuj je i zaimportuj do własnego publicznego repozytorium według instrukcji poniżej.</p>
+        <p>Alternatywnie prowadzący może przekazać link do publicznego template lub zadania Classroom. Nie potrzebujesz dostępu do prywatnego repozytorium prowadzącego ani jego publicznego forka.</p>
+      </div>
+      <ol>
+        <li>Dla pobranego archiwum utwórz <strong>nowe, puste publiczne repozytorium</strong>, bez automatycznego README. Rozpakuj pliki aplikacji do nowego lokalnego katalogu. Nie kopiuj katalogu <code>.git</code> ani historii prowadzącego, <code>node_modules</code>, <code>bin</code>, <code>obj</code>, raportów czy konfiguracji strony kursu. Zainicjuj własną historię według ściągi poniżej.</li>
+        <li>Jeżeli prowadzący wskazał zamiast archiwum publiczny template, wybierz <strong>Use this template → Create a new repository → Public</strong>, bez kopiowania wszystkich gałęzi. W Classroom zaakceptuj wskazane zadanie i sprawdź widoczność oraz uprawnienia utworzonego repozytorium.</li>
+        <li>Dla template/Classroom sklonuj <strong>swoje</strong> utworzone repozytorium przez adres z <strong>Code → HTTPS</strong> lub SSH. Dla archiwum pracuj w katalogu zaimportowanym do nowego repozytorium — nie musisz klonować go ponownie. Po utworzeniu pierwszego commita sprawdź, że <code>main</code> jest gałęzią domyślną. Sam push plików startowych nie uruchomi CI, dopóki nie dodasz workflow.</li>
+      </ol>
+      <details class="solution-reveal command-cheatsheet">
+        <summary>Import pobranego archiwum bez historii prowadzącego</summary>
+        <p>Wykonaj te polecenia wyłącznie w nowym katalogu z czystym eksportem, którego korzeń zawiera <code>MissionControl.slnx</code> i <code>global.json</code>. Nie wskazuj repozytorium kursu ani prywatnej gałęzi prowadzącego jako origin.</p>
+        <pre tabindex="0" aria-label="Utworzenie własnej historii i wysłanie czystego startera"><code class="language-bash">git init -b main
+git add .
+git commit -m "Start laboratorium CI"
+git remote add origin &lt;ADRES_TWOJEGO_NOWEGO_PUBLICZNEGO_REPOZYTORIUM&gt;
+git push -u origin main</code></pre>
+        <p>W GitHubie powinny być widoczne pliki aplikacji w korzeniu i Twój pierwszy commit, bez commitów rozwiązania prowadzącego. Nie zmieniaj widoczności prywatnej kopii ani nie próbuj tworzyć publicznego forka prywatnego repozytorium.</p>
+      </details>
+      <details class="solution-reveal command-cheatsheet">
+        <summary>Alternatywa: pobranie własnego repozytorium z template lub Classroom</summary>
+        <pre tabindex="0" aria-label="Pobranie własnego repozytorium utworzonego przez template lub Classroom"><code class="language-bash">git clone &lt;ADRES_TWOJEGO_PUBLICZNEGO_REPOZYTORIUM&gt;
+cd &lt;NAZWA_TWOJEGO_REPOZYTORIUM&gt;
+git status --short | cat</code></pre>
+      </details>
+      <pre tabindex="0" aria-label="Najważniejsze pliki startera"><code class="language-text">MissionControl.slnx
+global.json
+NuGet.Config
+.nvmrc
+backend/          API .NET
+backend.tests/    gotowe testy HTTP API z MySQL Testcontainers
+frontend/         Angular i gotowe testy Vitest
+docs/             kontrakt API</code></pre>
+      <p><strong>Sprawdź:</strong> nie ma jeszcze <code>.github/workflows/ci.yml</code> ani trzech lockfiles aplikacji. Korzeń projektu rozpoznajesz po <code>MissionControl.slnx</code>, <code>global.json</code> i <code>.nvmrc</code>. Starsze materiały z <code>MissionControl.sln</code> nie są punktem startowym tego laboratorium.</p>
+    </section>
+
+    <section id="zadanie-01" data-task="1">
+      <span class="task-level">Rdzeń</span>
+      <h2>Zadanie 1 — pierwszy push, jeden job, dwa kroki</h2>
+      <p class="task-tools"><strong>Narzędzia:</strong> Git, edytor, przeglądarka, własne repozytorium z włączonym Actions. SDK aplikacji nie jest jeszcze potrzebne.</p>
+      <h3>Zrób</h3>
+      <ol>
+        <li>W korzeniu własnego repozytorium utwórz <code>.github/workflows/ci.yml</code>. Nadaj workflow nazwę <code>Mission Control CI</code>.</li>
+        <li>Zacznij od <code>push</code>, jednego joba <code>hello</code> na <code>ubuntu-24.04</code> i <strong>dwóch osobnych kroków <code>run</code></strong>. Pierwszy ma wypisać powitanie, drugi katalog roboczy i nazwę systemu. Nazwij oba kroki.</li>
+        <li>Zapisz plik, commit i pierwszy push konfiguracji. Nie dodawaj jeszcze checkout, cache ani testów.</li>
+      </ol>
+      <details class="solution-reveal">
+        <summary>Szkielet pierwszego pliku</summary>
+        <p>Uzupełnij listę <code>steps</code> przed wysłaniem — sam komentarz nie tworzy żadnego kroku.</p>
+        <pre tabindex="0" aria-label="Niepełny szkielet pierwszego workflow"><code class="language-yaml">name: Mission Control CI
+on: push
+
+jobs:
+  hello:
+    runs-on: ubuntu-24.04
+    steps:
+      # Dodaj dwa nazwane kroki run.</code></pre>
+      </details>
+      <pre tabindex="0" aria-label="Zapisanie pierwszego workflow"><code class="language-bash">git add .github/workflows/ci.yml
+git commit -m "ci: uruchom pierwszy workflow"
+git push</code></pre>
+      <h3>Czego się uczysz</h3>
+      <p>GitHub wykrywa workflow z repozytorium. Zdarzenie tworzy run, job otrzymuje runner, a kroki wykonują się kolejno. Nazwy pomagają odczytać logi; identyfikator joba jest kluczem konfiguracji.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> <strong>Actions → Mission Control CI → run → hello</strong>. Wskaż commit, zdarzenie <code>push</code>, oba własne kroki i ich logi. Oczekiwany rezultat: zielony run i dwa różne komunikaty. Automatyczne <em>Set up job</em> nie jest jednym z Twoich dwóch kroków.</div>
+    </section>
+
+    <section id="zadanie-02" data-task="2">
+      <span class="task-level">Rdzeń</span>
+      <h2>Zadanie 2 — pobierz kod i przygotuj SDK</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Dodaj checkout kodu przed krokiem, który odczytuje pliki projektu.</li>
+        <li>Dodaj <code>actions/setup-dotnet</code> z <code>global-json-file: global.json</code> i <code>actions/setup-node</code> z <code>node-version-file: .nvmrc</code>. Na tym etapie nie włączaj cache zależności.</li>
+        <li>W osobnym kroku sprawdź obecność rozwiązania oraz wersje narzędzi. Nie wpisuj innej wersji SDK bezpośrednio w YAML.</li>
+      </ol>
+      <pre tabindex="0" aria-label="Kontrola kodu i SDK na runnerze"><code class="language-bash">test -f MissionControl.slnx
+test -f global.json
+test -f .nvmrc
+dotnet --version
+node --version
+npm --version</code></pre>
+      <details class="solution-reveal command-cheatsheet">
+        <summary>Jak wybrać i zapisać referencję do action</summary>
+        <ul>
+          <li>Przeczytaj wejścia w dokumentacji: <a href="https://github.com/actions/checkout">checkout</a>, <a href="https://github.com/actions/setup-dotnet">setup-dotnet</a>, <a href="https://github.com/actions/setup-node">setup-node</a>.</li>
+          <li>Wybierz wspierane wydanie i sprawdź jego pochodzenie. Referencja ma postać <code>owner/repo@ref</code>; w utrwalonej konfiguracji przypnij zweryfikowany pełny SHA i dopisz czytelny komentarz z wersją.</li>
+          <li>W małych przykładach tej instrukcji pojawiają się czytelne tagi akcji. W swoim workflow stosuj konsekwentnie wybrane referencje; tag action nie określa wersji .NET ani Node.</li>
+          <li>Krok ma albo <code>uses</code> i <code>with</code>, albo <code>run</code>. Nie umieszczaj polecenia CLI jako wartości <code>uses</code>.</li>
+          <li>Jeżeli używana wersja setup-node automatycznie włącza cache na podstawie manifestu, wyłącz tę funkcję do zadania 13 zgodnie z README akcji.</li>
+        </ul>
+      </details>
+      <h3>Czego się uczysz</h3>
+      <p>Runner nie otrzymuje automatycznie plików aplikacji. <code>uses</code> uruchamia akcję, a <code>with</code> przekazuje jej parametry. Wersje narzędzi należą do projektu, nie do przypadkowego obrazu maszyny.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> widać checkout i przygotowanie obu SDK, a kontrola plików przechodzi. Porównaj wersje z plikami startera. Jeśli krok znajduje pliki tylko lokalnie, ustal, czy zostały wysłane do repozytorium.</div>
+    </section>
+
+    <section id="zadanie-03" data-task="3">
+      <span class="task-level">Rdzeń</span>
+      <h2>Zadanie 3 — feature branch i pull request</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Utwórz gałąź <code>feature/pr-ci</code>. Zmień triggery: push tylko do <code>main</code>, pull request z bazą <code>main</code>. Na razie nie dodawaj filtrów <code>paths</code>.</li>
+        <li>Wyślij gałąź i otwórz PR. Dopisz małą zmianę w README, aby zobaczyć aktualizację checks po kolejnym commicie.</li>
+        <li>Po zielonym CI przejrzyj diff i scal PR. W parze poproś drugą osobę o review; nie zatwierdzaj własnego PR-a jako wymaganej recenzji.</li>
+      </ol>
+      <pre tabindex="0" aria-label="Zdarzenia workflow dla main i PR"><code class="language-yaml">on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]</code></pre>
+      <pre tabindex="0" aria-label="Przygotowanie gałęzi zmiany"><code class="language-bash">git switch main
+git pull --ff-only
+git switch -c feature/pr-ci
+# Po edycji: git add, git commit, a następnie:
+git push -u origin feature/pr-ci</code></pre>
+      <h3>Czego się uczysz</h3>
+      <p>PR sprawdza proponowaną integrację, a push na main sprawdza stan po scaleniu. Domyślny checkout dla <code>pull_request</code> korzysta z przygotowanego przez GitHub merge ref. <code>branches</code> przy PR oznacza gałąź docelową, nie nazwę <code>feature/*</code>. <code>pull --ff-only</code> odmawia automatycznego merge przy rozbieżnej historii; nie zastępuje zapisywania lokalnej pracy.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> PR pokazuje check dla najnowszego commita. Po merge jest osobny run typu push na main. Kolejny push do otwartego PR-a nie tworzy dodatkowo runa <em>push na feature</em>, ponieważ ten trigger jest ograniczony do main.</div>
+    </section>
+
+    <section id="zadanie-04" data-task="4">
+      <span class="task-level">Rdzeń</span>
+      <h2>Zadanie 4 — ręczny start i typowane wejścia</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Na nowej gałęzi dodaj <code>workflow_dispatch</code> z wejściem <code>configuration</code> typu <code>choice</code>: <code>Release</code> / <code>Debug</code>, domyślnie Release. Dodaj <code>extra_diagnostics</code> typu <code>boolean</code>, domyślnie false.</li>
+        <li>Dodaj <code>run-name</code> zawierające zdarzenie i wybraną konfigurację. Przekaż konfigurację do kroku przez <code>env</code>. Dla push i PR wybieraj Release, bo te zdarzenia nie dostarczają formularza inputs.</li>
+        <li>Dodaj krok z <code>dotnet --info</code> i <code>docker version</code>, wykonywany tylko przy ręcznym starcie z włączoną diagnostyką. Nie wypisuj całego środowiska ani kontekstów.</li>
+        <li><strong>Najpierw bootstrap:</strong> wyślij gałąź, otwórz PR, sprawdź zwykły run PR i scal definicję do main. Dopiero wtedy otwórz <strong>Actions → Mission Control CI → Run workflow</strong>.</li>
+        <li>Uruchom raz Release bez diagnostyki i raz Debug z diagnostyką. Po obecności definicji na main możesz w formularzu wybrać także inną gałąź zawierającą ten workflow.</li>
+      </ol>
+      <details class="solution-reveal">
+        <summary>Mały fragment: wejście jako wartość i warunek</summary>
+        <p>Deklaracje inputs i pozostałe kroki dopisz samodzielnie. <code>choice</code> daje tekst, a boolean w kontekście <code>inputs</code> jest wartością logiczną.</p>
+        <pre tabindex="0" aria-label="Fragment przekazywania inputów do kroku"><code class="language-yaml" data-embedded="github-actions">env:
+  BUILD_CONFIGURATION: ${{ inputs.configuration || 'Release' }}
+
+# W kroku diagnostycznym:
+if: ${{ github.event_name == 'workflow_dispatch' &amp;&amp; inputs.extra_diagnostics }}</code></pre>
+      </details>
+      <h3>Czego się uczysz</h3>
+      <p>Formularz, nazwa runa, warunek kroku i środowisko powłoki mają różne role. Wyrażenie GitHub wybiera wartość, a Bash odczytuje ją np. przez <code>"$BUILD_CONFIGURATION"</code>.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> dwa ręczne runy mają właściwe nazwy i konfiguracje; dodatkowy krok raz jest skipped, raz wykonany. Run PR nadal działa z Release. Sam plik na gałęzi feature nie wystarcza do pojawienia się przycisku ręcznego startu.</div>
+    </section>
+
+    <section id="zadanie-05" data-task="5">
+      <span class="task-level">Rdzeń</span>
+      <h2>Zadanie 5 — kontrolowany błąd i adnotacje</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Na gałęzi PR dodaj krok z ostrzeżeniem <code>::warning</code> i błędem <code>::error</code>, wskazując istniejący plik i linię. Zakończ krok poleceniem <code>exit 1</code>.</li>
+        <li>Wyślij commit i znajdź pierwszy czerwony krok, jego adnotację oraz kod zakończenia. Sprawdź, co stało się z późniejszymi krokami.</li>
+        <li>Nowym commitem usuń kontrolowany błąd. Nie dodawaj <code>continue-on-error</code> ani <code>|| true</code>.</li>
+      </ol>
+      <pre tabindex="0" aria-label="Kontrolowana adnotacja błędu"><code class="language-bash">printf '::error file=README.md,line=1::Kontrolowany blad konfiguracji CI\n'
+exit 1</code></pre>
+      <h3>Czego się uczysz</h3>
+      <p>Workflow commands tworzą czytelne adnotacje. O niepowodzeniu decyduje także kod zakończenia procesu — samo wypisanie komunikatu nie zastępuje poprawnej propagacji błędu.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> zachowaj linki do czerwonego i zielonego runa tego PR-a. Pokaż adnotację przy podsumowaniu/checku oraz miejsce błędu w logu. Oba wyniki muszą dotyczyć Twojej rzeczywistej konfiguracji, nie ręcznie zmienionego statusu.</div>
+    </section>
+
+    <section id="zadanie-06" data-task="6">
+      <span class="task-level">Rdzeń</span>
+      <h2>Zadanie 6 — wygeneruj trzy lockfiles i uruchom gotowe testy</h2>
+      <p class="task-tools"><strong>Narzędzia:</strong> od tego zadania lokalnie wymagane są SDK z global.json, Node/npm z .nvmrc oraz działający Docker Linux Engine.</p>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Porównaj <code>PackageReference</code> w projektach .NET i zależności w <code>frontend/package.json</code>. Starter zawiera deklaracje, ale celowo nie dostarcza rozwiązanych lockfiles.</li>
+        <li>Wygeneruj je lokalnie poniższymi poleceniami. Obejrzyj zależności bezpośrednie i przechodnie; nie przepisuj JSON ręcznie.</li>
+        <li>Sprawdź locked restore, build i testy obu komponentów. Testcontainers sam tworzy odizolowany MySQL 8.4 i zwalnia go po testach; nie uruchamiaj dodatkowego serwisu bazy.</li>
+        <li>Dodaj do Gita <strong>dokładnie trzy lockfiles</strong> i commit. Nie dodawaj zależności, wyników budowania ani raportów.</li>
+      </ol>
+      <pre tabindex="0" aria-label="Generowanie lockfiles przez studenta"><code class="language-bash">dotnet restore MissionControl.slnx --use-lock-file
+cd frontend
+npm install
+cd ..
+git status --short | cat</code></pre>
+      <pre tabindex="0" aria-label="Lokalny build i testy gotowej aplikacji"><code class="language-bash">dotnet restore --locked-mode
+dotnet build --configuration Release
+dotnet test --configuration Release
+cd frontend
+npm ci
+npm run build
+npm test
+cd ..</code></pre>
+      <pre tabindex="0" aria-label="Dodanie trzech lockfiles"><code class="language-bash">git add backend/packages.lock.json backend.tests/packages.lock.json frontend/package-lock.json
+git commit -m "build: zapisz lockfiles aplikacji"</code></pre>
+      <h3>Czego się uczysz</h3>
+      <p>Manifest określa wymagania, lockfile utrwala rozwiązany zestaw zależności. Pierwsze generowanie należy do autora zmiany, odtwarzanie w CI ma wykrywać brak lub niezgodność lockfile. Testy i ich konfiguracja są częścią startera.</p>
+      <div class="callout"><strong>Sprawdź lokalnie i w GitHub:</strong> build/test zwracają sukces, w commicie są <code>backend/packages.lock.json</code>, <code>backend.tests/packages.lock.json</code> i <code>frontend/package-lock.json</code>. Raporty nie trafiają do Gita. Niepowodzenie połączenia z Dockerem jest błędem środowiska, nie zgodą na pominięcie testów.</div>
+    </section>
+
+    <section id="zadanie-07" data-task="7">
+      <span class="task-level">Rdzeń</span>
+      <h2>Zadanie 7 — prawdziwe CI backendu</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Zastąp demonstracyjny job jobem <code>backend</code> z czytelnym <code>name</code>, np. <code>Backend</code>. Zachowaj triggery i ręczne inputs.</li>
+        <li>Na standardowym <code>ubuntu-24.04</code> wykonaj checkout, konfigurację .NET i kontrolę <code>docker version</code>. Przed restore sprawdź oba lockfiles .NET.</li>
+        <li>Dodaj osobne kroki: <code>dotnet restore --locked-mode</code>, <code>dotnet build --configuration "$BUILD_CONFIGURATION"</code>, <code>dotnet test --configuration "$BUILD_CONFIGURATION"</code>. Pracuj w korzeniu z rozwiązaniem <code>.slnx</code>.</li>
+        <li>Wykorzystaj dostarczoną konfigurację startera: raporty ustawia <code>backend.tests/test.runsettings</code>, a <code>Directory.Build.props</code> przy <code>CI=true</code> włącza locked restore również dla zwykłego build/test. <code>Directory.Build.targets</code> odrzuca brak lockfile .NET. Nie obchodź tych reguł przez usunięcie konfiguracji projektu ani nadpisanie właściwości restore.</li>
+      </ol>
+      <pre tabindex="0" aria-label="Kontrola lockfiles backendu w Bash"><code class="language-bash">test -f backend/packages.lock.json
+test -f backend.tests/packages.lock.json
+docker version</code></pre>
+      <details class="solution-reveal">
+        <summary>Dlaczego nie konfigurujemy MySQL w YAML?</summary>
+        <p>Fixture Testcontainers już wybiera obraz MySQL 8.4, port i połączenie dla testów HTTP API. Standardowy runner <code>ubuntu-24.04</code> udostępnia Docker. Druga baza w <code>services</code>, Compose albo sekret z hasłem do zewnętrznej bazy nie jest tu potrzebna.</p>
+      </details>
+      <h3>Czego się uczysz</h3>
+      <p>Osobne kroki odróżniają błąd zależności, kompilacji i zachowania aplikacji. Taka sama konfiguracja projektu upraszcza polecenia lokalne i CI bez ukrywania nieudanego restore.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> log zawiera rzeczywiście wykonane testy API, nie zero testów ani same skipped. Widać uruchomienie MySQL przez Testcontainers. Build i test używają wybranej konfiguracji; przy PR jest to Release.</div>
+    </section>
+
+    <section id="zadanie-08" data-task="8">
+      <span class="task-level">Rdzeń</span>
+      <h2>Zadanie 8 — frontend jako niezależny, równoległy job</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Dodaj job <code>frontend</code>, np. z nazwą <code>Frontend</code> i <code>runs-on: ubuntu-24.04</code>. Nie dodawaj <code>needs: backend</code>: testy UI nie potrzebują działającego API.</li>
+        <li>W nowym jobie ponownie wykonaj checkout i setup-node z <code>.nvmrc</code>. Sprawdź obecność <code>frontend/package-lock.json</code>.</li>
+        <li>Uruchom w <code>frontend/</code> osobno <code>npm ci</code>, <code>npm run build</code> i <code>npm test</code>. Ten ostatni skrypt jest już nieinteraktywny i używa skonfigurowanego Vitest.</li>
+        <li>Użyj <code>defaults.run.working-directory</code> na poziomie joba albo jawnych katalogów przy krokach. Nie zmieniaj katalogu backendu przez globalny default.</li>
+      </ol>
+      <pre tabindex="0" aria-label="Domyślny katalog kroków run frontendu"><code class="language-yaml"># Fragment joba frontend:
+defaults:
+  run:
+    shell: bash
+    working-directory: frontend</code></pre>
+      <h3>Czego się uczysz</h3>
+      <p>Niezależne jobs mogą działać równolegle; kolejność wewnątrz każdego joba pozostaje zachowana. <code>defaults.run</code> dotyczy <code>run</code>, nie ścieżek w <code>with</code> akcji setup lub upload.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> graf pokazuje Backend i Frontend bez strzałki zależności między nimi. Ich wykonania mogą się pokrywać w czasie; kolejka runnerów może je opóźnić. Testy UI przechodzą bez uruchamiania backendu i bazy w tym jobie.</div>
+    </section>
+
+    <section id="zadanie-09" data-task="9">
+      <span class="task-level">Rdzeń</span>
+      <h2>Zadanie 9 — regresja aplikacji i nieaktualny lockfile</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li><strong>Regresja:</strong> na gałęzi PR zmień kod API tak, aby POST przestał odrzucać pustą nazwę misji. Znajdź walidację w aplikacji i odpowiadający jej gotowy test <code>RejectsABlankMissionName</code>. Nie edytuj testu.</li>
+        <li>Potwierdź błąd lokalnie, wyślij commit i zachowaj czerwony run. Przywróć poprawną walidację nowym commitem i sprawdź zielone testy.</li>
+        <li><strong>Niezgodne zależności:</strong> w oddzielnej zmianie ustaw w <code>frontend/package.json</code> inną, opublikowaną i zgodną wersję jednej zależności. Wybierz wersję <em>inną niż rozwiązana w lockfile</em>, najlepiej dokładną wersję kompatybilnej poprawki. Nie aktualizuj jeszcze lockfile.</li>
+        <li>Wyślij manifest bez zmienionego lockfile. Po udokumentowaniu błędu <code>npm ci</code> wykonaj lokalne <code>npm install</code>, przejrzyj diff, uruchom build/test i zapisz poprawiony lockfile w następnym commicie.</li>
+      </ol>
+      <details class="solution-reveal command-cheatsheet">
+        <summary>Jak wybrać zmianę zależności bez losowego psucia projektu</summary>
+        <ul>
+          <li>Sprawdź opublikowane wersje przez <code>npm view &lt;NAZWA_PACZKI&gt; versions --json</code>. Nie wymyślaj nieistniejącego numeru i nie aktualizuj całego Angulara na potrzeby tej próby.</li>
+          <li>Zmiana zakresu, który nadal obejmuje wersję z lockfile, nie zawsze powoduje niezgodność. Porównaj rzeczywiście zablokowaną wersję z nową deklaracją.</li>
+          <li>Odpowiednik w .NET: zmiana <code>PackageReference</code> bez aktualizacji <code>packages.lock.json</code> ma zostać odrzucona przez locked restore. Naprawiasz ją lokalnym restore w trybie aktualizacji i commitem odpowiednich lockfiles.</li>
+          <li>Nie „naprawiaj” CI przez zamianę <code>npm ci</code> na <code>npm install</code>, usunięcie lockfiles czy dodanie skip do testu.</li>
+        </ul>
+      </details>
+      <h3>Czego się uczysz</h3>
+      <p>Czerwony test i czerwony restore wskazują różne problemy. Naprawa zachowania aplikacji nie jest zmianą oczekiwań testu, a aktualizacja zależności jest świadomą, recenzowaną zmianą.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> masz dwie pary dowodów: test regresyjny fail → pass oraz instalacja zależności fail → pass. Wskaż inne pierwsze nieudane kroki. Testy nie zostały osłabione, a przejściowo zepsuty kod nie trafił do main.</div>
+    </section>
+
+    <section id="zadanie-10" data-task="10">
+      <span class="task-level">Rdzeń</span>
+      <h2>Zadanie 10 — zachowaj raport także po nieudanym teście</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Sprawdź pliki generowane przez starter: <code>TestResults/backend.trx</code>, <code>frontend/test-results/junit.xml</code> i <code>frontend/test-results/results.json</code>. Nie zmieniaj test runnera tylko po to, by uzyskać raport.</li>
+        <li>Na końcu obu jobs dodaj upload odpowiednich raportów z warunkiem <code>always()</code>. Nadaj różne nazwy backendowi i frontendowi, uwzględnij run oraz attempt i ustaw krótką retencję, np. 7 dni.</li>
+        <li>W kontrolowanym PR ponownie wywołaj regresję z zadania 9, pobierz raport nieudanego testu, a następnie napraw kod.</li>
+      </ol>
+      <details class="solution-reveal">
+        <summary>Fragment jednego uploadu — drugi skonfiguruj samodzielnie</summary>
+        <pre tabindex="0" aria-label="Upload raportów frontendu po sukcesie lub błędzie"><code class="language-yaml" data-embedded="github-actions">- name: Zachowaj raporty UI
+  if: ${{ always() }}
+  uses: actions/upload-artifact@v4
+  with:
+    name: frontend-tests-${{ github.run_id }}-${{ github.run_attempt }}
+    path: frontend/test-results/
+    retention-days: 7
+    if-no-files-found: warn</code></pre>
+        <p><code>warn</code> uwzględnia sytuację, w której wcześniejszy restore/build nie pozwolił nawet uruchomić testów. Udany test ma jednak utworzyć rzeczywisty raport — sprawdź to. Upload nie może zmienić nieudanego joba na udany.</p>
+      </details>
+      <h3>Czego się uczysz</h3>
+      <p>Raport jest artefaktem konkretnego uruchomienia, nie plikiem źródłowym ani cache. Warunek zbierania dowodów po błędzie nie jest zgodą na ignorowanie błędu.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> w podsumowaniu czerwonego runa jest artefakt z raportem rzeczywiście nieudanego testu. Po pobraniu znajdź nazwę i przyczynę błędu. Przy wcześniejszym błędzie kompilacji uczciwie odnotuj brak raportu, zamiast tworzyć pusty „wynik”.</div>
+    </section>
+
+    <section id="zadanie-11" data-task="11">
+      <span class="task-level">Rdzeń</span>
+      <h2>Zadanie 11 — jawna konfiguracja, fikcyjny sekret, minimalny token</h2>
+      <p class="task-tools"><strong>Uprawnienia:</strong> dostęp do Settings → Secrets and variables → Actions.</p>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Utwórz repository variable <code>LAB_LABEL</code> z nazwą grupy lub projektu. Przekaż <code>vars.LAB_LABEL</code> do <code>env</code> i użyj jej w czytelnym komunikacie.</li>
+        <li>Utwórz repository secret <code>LAB_DEMO_TOKEN</code> z wymyśloną wartością wyłącznie do ćwiczenia. To nie ma być prawdziwy token GitHub ani hasło.</li>
+        <li>Przekaż sekret do <code>env</code> tylko kroku sprawdzającego <em>obecność</em>. Wypisz jedynie „skonfigurowany” lub „brak”; nigdy wartość, długość, hash ani fragment sekretu.</li>
+        <li>Ustaw workflow <code>permissions: contents: read</code> w postaci mapy YAML. Zweryfikuj testy także bez sekretu. Jobs zapisujące komentarz lub wydanie otrzymają osobne, wąskie uprawnienia dopiero w późniejszych zadaniach.</li>
+      </ol>
+      <pre tabindex="0" aria-label="Kontrola obecności fikcyjnego sekretu bez jego ujawnienia"><code class="language-bash">if [ -n "$LAB_DEMO_TOKEN" ]; then
+  printf 'Sekret cwiczeniowy skonfigurowany\n'
+else
+  printf 'Brak sekretu; testy nie wymagaja go do pracy\n'
+fi</code></pre>
+      <h3>Czego się uczysz</h3>
+      <p><code>vars</code> to jawna konfiguracja, <code>secrets</code> to chronione dane, a <code>permissions</code> ogranicza token danego joba. Nie odwołuj się bezpośrednio do <code>secrets</code> w <code>if</code>; kontrolę obecności wykonaj przez środowisko kroku. PR z forka zwykle nie otrzymuje sekretów i ma token tylko do odczytu.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> log pokazuje etykietę projektu i wyłącznie informację o obecności sekretu. Zwykły build/test pozostaje zielony po usunięciu fikcyjnego sekretu. Nie ma dumpa <code>env</code>, <code>toJSON(github)</code> ani <code>set -x</code> przy danych chronionych.</div>
+    </section>
+
+    <section id="zadanie-12" data-task="12">
+      <span class="task-level">Rdzeń</span>
+      <h2>Zadanie 12 — wymagany PR i rzeczywiste checks</h2>
+      <p class="task-tools"><strong>Uprawnienia:</strong> właściciel/admin repozytorium; do wymaganej recenzji potrzebna jest druga osoba z odpowiednim dostępem.</p>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Po rzeczywistym zielonym runie otwórz PR i zapisz dokładne nazwy checks backendu i frontendu. Nie zgaduj ich na podstawie nazwy pliku YAML.</li>
+        <li>Utwórz aktywny ruleset dla <code>main</code> albo równoważną ochronę gałęzi. Wymagaj PR i tych istniejących checks; zablokuj force push oraz usuwanie gałęzi. Nie dodawaj siebie do bypass list.</li>
+        <li>W parze wymagaj jednego zatwierdzenia review. W pracy samodzielnej nie ustawiaj warunku niemożliwego do spełnienia własnym kontem — required PR i checks nadal obowiązują.</li>
+        <li>Utwórz gałąź z niegroźną zmianą README i commitem. Spróbuj <code>git push origin HEAD:main</code>: push ma zostać odrzucony. Następnie wyślij <em>tę samą gałąź</em> normalnie i otwórz PR; nie zmieniasz lokalnego main ani historii zdalnej.</li>
+        <li>Na PR-ie z kontrolowanym błędem sprawdź blokadę merge. Napraw przyczynę nowym commitem i scal dopiero po spełnieniu wszystkich reguł.</li>
+      </ol>
+      <details class="solution-reveal">
+        <summary>Gdzie sprawdzić, czy ochrona naprawdę działa</summary>
+        <p>Użyj <strong>Settings → Rules → Rulesets</strong> albo <strong>Settings → Branches</strong>, zależnie od dostępnego interfejsu. Reguła musi być aktywna, obejmować main i obowiązywać także konto użyte do próby. W klasycznej ochronie uwzględnij administratorów. Jeśli push przechodzi lub widzisz możliwość bypass, popraw konfigurację i powtórz próbę — nie przedstawiaj jej jako sukcesu.</p>
+        <p>Po późniejszym refaktorze do reusable odczytasz nazwy na nowo. Dopiero w zadaniu 19 zastąpisz wymagane checks jednym sprawdzonym gate'em. Zmiany ustawień są częścią migracji, a nie powodem do wymuszonego merge.</p>
+      </details>
+      <h3>Czego się uczysz</h3>
+      <p>Zielony run sam nie chroni repozytorium. Ochrona jest polityką na gałęzi i wyniku dla właściwego SHA. Brak checka oraz check zakończony niepowodzeniem to różne przyczyny blokady.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> zachowaj widok aktywnej reguły, odrzucenie bezpośredniego pushu i PR z zablokowanym merge przy czerwonym CI. Po poprawce blokada znika bez przycisku „bypass”, wyłączania reguły ani ręcznego nadawania zielonego statusu.</div>
+    </section>
+
+    <section id="zadanie-13" data-task="13">
+      <span class="task-level">Rdzeń</span>
+      <h2>Zadanie 13 — cache zależności: cold, warm i nowy lockfile</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Zacznij od działającego CI bez cache. Dla npm dodaj <code>actions/cache</code> obejmujące <code>~/.npm</code>, nie <code>node_modules</code>. Nie włączaj równocześnie drugiego cache tej samej ścieżki w setup-node.</li>
+        <li>Przed krokiem cache sprawdź obecność <code>.nvmrc</code> i lockfile frontendu. Klucz ma uwzględniać własny namespace, system, architekturę, wersję Node i hash lockfile. Opcjonalny <code>restore-keys</code> może pominąć hash zależności, ale nie tożsamość środowiska.</li>
+        <li>Uruchom cold run z nowym namespace klucza, potem drugi run tego samego kodu i ref. Odczytaj klucz, log przywracania, <code>cache-hit</code> i czas <code>npm ci</code>.</li>
+        <li>Wprowadź zgodną zmianę zależności <em>wraz z lockfile</em>. Potwierdź nowy klucz i odróżnij exact hit od odtworzenia po prefiksie.</li>
+        <li>Powtórz pomiar bez dostępu do poprzedniego cache, np. zmieniając wyłącznie swój namespace. Build i testy nadal mają przejść. Dla NuGet zastosuj tę samą zasadę do <code>~/.nuget/packages</code>, wersji SDK i obu lockfiles .NET.</li>
+      </ol>
+      <details class="solution-reveal">
+        <summary>Przykładowy klucz, nie kompletna konfiguracja cache</summary>
+        <pre tabindex="0" aria-label="Klucz cache npm związany z wersją Node i lockfile"><code class="language-yaml" data-embedded="github-actions">key: ci-npm-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.nvmrc') }}-${{ hashFiles('frontend/package-lock.json') }}</code></pre>
+        <p><code>cache-hit</code> jest tekstem: exact hit sprawdzasz przez <code>== 'true'</code>. Wartość inna niż <code>'true'</code> nie dowodzi, że nie przywrócono niczego — przeczytaj log fallbacku. Brak pliku może dać pusty hash, dlatego potrzebna jest wcześniejsza kontrola plików.</p>
+      </details>
+      <h3>Czego się uczysz</h3>
+      <p>Cache przyspiesza ponowne pobranie paczek, ale może wygasnąć, zostać usunięty lub być niedostępny dla innej gałęzi. Nie zapisuj w nim <code>bin</code>, <code>obj</code>, raportów, sekretów ani konfiguracji prywatnych rejestrów.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> w dzienniku masz trzy porównywalne pomiary: cold, warm, nowy lockfile, wraz z kluczami i wynikiem instalacji. <code>npm ci</code>, locked restore, build i testy wykonują się także po hit. Krótszy czas całego runa nie jest gwarantowany — istotne są logi i poprawność.</div>
+    </section>
+
+    <section id="zadanie-14" data-task="14">
+      <span class="task-level">Rozszerzenie · przepływ danych</span>
+      <h2>Zadanie 14 — output kroku do run i uses, obok GITHUB_ENV</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li>W backendzie dodaj wczesny krok z <code>id: metadata</code>. Wylicz nazwę raportu zawierającą run i attempt i wystaw ją przez <code>GITHUB_OUTPUT</code>.</li>
+        <li>W kolejnym kroku <code>run</code> przekaż output do <code>env</code> i wypisz nazwę. W kroku <code>uses</code> użyj tego samego outputu jako <code>with.name</code> uploadu raportu.</li>
+        <li>W kroku producenta zapisz też jawną etykietę <code>REPORT_COMPONENT=backend</code> do <code>GITHUB_ENV</code>. Odczytaj ją w <em>następnym</em> kroku. Nie nadawaj jej ponownie przez YAML <code>env</code>, bo wtedy nie zbadasz tego mechanizmu.</li>
+        <li>Powtórz ten kontrakt dla frontendu z odrębną nazwą artefaktu.</li>
+      </ol>
+      <pre tabindex="0" aria-label="Metadane w plikach środowiskowych GitHub Actions"><code class="language-bash">printf 'report_name=backend-tests-%s-%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" &gt;&gt; "$GITHUB_OUTPUT"
+printf 'REPORT_COMPONENT=backend\n' &gt;&gt; "$GITHUB_ENV"</code></pre>
+      <details class="solution-reveal">
+        <summary>Dwa różne miejsca odczytu tego samego outputu</summary>
+        <pre tabindex="0" aria-label="Odczyt outputu przez run i uses"><code class="language-yaml" data-embedded="github-actions"># Krok run:
+env:
+  REPORT_NAME: ${{ steps.metadata.outputs.report_name }}
+shell: bash
+run: |
+  printf 'Raport: %s\n' "$REPORT_NAME"
+
+# Fragment with w kroku uploadu:
+name: ${{ steps.metadata.outputs.report_name }}</code></pre>
+        <p>Zachowaj <code>id</code> producenta i odwołuj się do <em>poprzedniego</em> kroku. Zapis do <code>GITHUB_ENV</code> nie zmienia już uruchomionej powłoki; wartość dostają kolejne kroki tego samego joba.</p>
+      </details>
+      <h3>Czego się uczysz</h3>
+      <p>Output jest nazwanym, tekstowym wynikiem operacji, użytecznym zarówno w poleceniu, jak i parametrach action. <code>GITHUB_ENV</code> ustawia środowisko następnych kroków, ale nie jest interfejsem joba ani sposobem przesłania pliku.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> nazwa wypisana przez run jest identyczna z nazwą pobieranego artefaktu. Następny krok widzi etykietę z GITHUB_ENV. W żadnym z tych kanałów nie ma sekretu ani raportu zakodowanego jako wielki tekst.</div>
+    </section>
+
+    <section id="zadanie-15" data-task="15">
+      <span class="task-level">Rozszerzenie · przepływ danych</span>
+      <h2>Zadanie 15 — metadane i pliki między runnerami</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Wystaw <code>report_name</code> jako output joba backendu i analogiczny output frontendu. Mapowanie musi prowadzić do wyniku kroku z zadania 14.</li>
+        <li>Dodaj job podsumowania na <code>ubuntu-24.04</code> z <code>needs: [backend, frontend]</code>. Na razie uruchamiaj go po sukcesie obu producentów; nie zastępuje on wymaganych testów.</li>
+        <li>Przed pobraniem sprawdź, że nowy workspace nie ma raportów z poprzednich jobs. Użyj <code>actions/download-artifact</code> dwa razy: nazwy weź z <code>needs</code>, a ścieżki ustaw osobno, np. <code>incoming/backend</code> i <code>incoming/frontend</code>.</li>
+        <li>Wyświetl listę otrzymanych plików i krótkie podsumowanie. Nie uruchamiaj pobranego pliku jako skryptu. Backend i frontend nadal nie mają zależeć od siebie.</li>
+      </ol>
+      <pre tabindex="0" aria-label="Wystawienie i odczyt outputu joba"><code class="language-yaml" data-embedded="github-actions"># W jobie backend:
+outputs:
+  report_name: ${{ steps.metadata.outputs.report_name }}
+
+# W with akcji download w jobie podsumowania:
+name: ${{ needs.backend.outputs.report_name }}
+path: incoming/backend</code></pre>
+      <h3>Czego się uczysz</h3>
+      <p><code>needs</code> porządkuje jobs i udostępnia zadeklarowane outputs. Przesłanie nazwy lub ścieżki pliku nie przesyła jego zawartości — temu służy artefakt. Bez <code>always()</code> zależny job zwykle nie ruszy po niepowodzeniu producenta.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> podsumowanie zaczyna się po obu producentach, odczytuje ich nazwy i znajduje oba raporty dopiero po download. Graf nadal pokazuje równoległe sprawdzanie aplikacji.</div>
+    </section>
+
+    <section id="zadanie-16" data-task="16">
+      <span class="task-level">Rozszerzenie · GitHub API</span>
+      <h2>Zadanie 16 — zmienione pliki PR-a i krótki komentarz</h2>
+      <p class="task-tools"><strong>Narzędzia:</strong> <code>actions/github-script</code> na runnerze. Do odczytu plików PR-a nadaj <code>pull-requests: read</code>; osobny job komentarza potrzebuje <code>pull-requests: write</code>.</p>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Dodaj job <code>changes</code>. Dla PR-a pobierz wszystkie strony listy zmienionych plików przez <code>github.paginate</code> i <code>github.rest.pulls.listFiles</code>, nie tylko pierwsze 30 lub 100 wyników.</li>
+        <li>Uwzględnij <code>filename</code> i, przy zmianie nazwy, <code>previous_filename</code>. Wylicz flagi <code>backend</code> i <code>frontend</code>; wystaw je oraz liczbę plików jako outputs kroku i joba.</li>
+        <li>Zmiany w <code>backend/</code>, <code>backend.tests/</code>, rozwiązaniu i konfiguracji .NET dotyczą backendu; <code>frontend/</code> i <code>.nvmrc</code> dotyczą frontendu. Zmiany automatyzacji w <code>.github/</code> konserwatywnie uruchamiają oba. Jawnie sklasyfikuj wspólne pliki startera, także <code>Directory.Build.*</code> i <code>NuGet.Config</code>.</li>
+        <li>Dla push i ręcznego startu, bez numeru PR-a, ustaw oba komponenty jako wymagające sprawdzenia. Awaria API, niekompletna lista lub nieznany format nie mogą po cichu dać dwóch false.</li>
+        <li>Dodaj osobny job komentarza: tylko dla <code>pull_request</code>, gdy <code>head.repo.full_name</code> jest równe <code>github.repository</code>. Bez checkout kodu PR-a opublikuj przez <code>github.rest.issues.createComment</code> liczbę plików i obie flagi.</li>
+        <li>Na razie obserwuj outputs, a nie pomijaj buildu. Warunkowe jobs wprowadzisz w zadaniu 19.</li>
+      </ol>
+      <details class="solution-reveal">
+        <summary>Punkt wyjścia do skryptu — klasyfikację i outputs dopisz samodzielnie</summary>
+        <pre tabindex="0" aria-label="Pobranie plików PR z paginacją"><code class="language-javascript">const files = await github.paginate(github.rest.pulls.listFiles, {
+  ...context.repo,
+  pull_number: context.issue.number,
+  per_page: 100
+});
+const paths = files.flatMap(file =&gt;
+  [file.filename, file.previous_filename].filter(Boolean)
+);
+// Sklasyfikuj paths i wystaw wyniki przez core.setOutput.</code></pre>
+        <p>API listy plików ma limit 3000 pozycji. Jeżeli liczba zmian w PR przekracza limit lub lista nie odpowiada deklarowanej liczbie, przerwij detekcję z błędem albo bezpiecznie zażądaj testów obu komponentów. Nie raportuj pozornego „braku zmian”.</p>
+        <p><code>core.setOutput</code> serializuje wynik do tekstu. Konsument ma sprawdzać <code>== 'true'</code>, a nie samo istnienie <code>'false'</code>. Nie wstawiaj tytułu PR-a ani nazw plików bezpośrednio do kodu JavaScript przez expressions — korzystaj z danych API/context.</p>
+      </details>
+      <details class="solution-reveal">
+        <summary>Krótki komentarz bez nadmiarowych uprawnień</summary>
+        <p>Na poziomie joba komentarza zadeklaruj wyłącznie niezbędne <code>pull-requests: write</code>. Użyj numeru PR-a z payloadu i tekstu z wyliczonych metadanych. Stały znacznik komentarza pozwala odnaleźć i zaktualizować własny poprzedni komentarz zamiast spamować przy rerun; wyszukiwanie komentarzy również wymaga paginacji.</p>
+        <p>Job odczytu i zwykłe testy pozostają bez praw zapisu. Przy PR-ze z forka komentarz ma zostać pominięty, a odczyt i testy nadal mogą działać. Nie używaj <code>pull_request_target</code> do obejścia ograniczeń.</p>
+      </details>
+      <h3>Czego się uczysz</h3>
+      <p>API służy do obliczeń na metadanych GitHuba, Bash do poleceń, a expressions do przekazania wyniku i warunków. Prawo do odczytu plików PR-a nie jest prawem do opublikowania komentarza.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> PR zmieniający tylko backend daje backend=true, frontend=false; README-only daje dwa false. Zmiana workflow daje dwa true. Komentarz na PR-ze z tego repozytorium zgadza się z logiem detekcji i nie zawiera sekretów. Wariant fork nie otrzymuje joba zapisu.</div>
+    </section>
+
+    <section id="zadanie-17" data-task="17">
+      <span class="task-level">Rozszerzenie · reużywanie</span>
+      <h2>Zadanie 17 — procedura backendu jako composite action</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Utwórz <code>.github/actions/backend-check/action.yml</code> z <code>runs.using: composite</code>. Przenieś do niego istniejące kroki kontroli lockfiles, locked restore, build/test i wyliczenia metadanych raportu.</li>
+        <li>Dodaj input <code>configuration</code>. Wszystkie inputs action są tekstowe, więc zaakceptuj tylko Debug lub Release, a nie dowolny ciąg przekazany do powłoki.</li>
+        <li>Wystaw output <code>report_name</code> z wewnętrznego kroku. Wywołaj lokalną action w <code>steps</code> po checkout i setup-dotnet, nadaj wywołaniu <code>id</code> i popraw odwołania do wyniku.</li>
+        <li>Ustaw <code>shell: bash</code> przy każdym wewnętrznym <code>run</code>. Upload raportów może pozostać w callerze z <code>always()</code>; nie ukrywaj niepowodzenia composite.</li>
+      </ol>
+      <pre tabindex="0" aria-label="Fragment interfejsu outputów composite action"><code class="language-yaml" data-embedded="github-actions"># Fragment action.yml, wewnętrzny krok ma id: metadata:
+outputs:
+  report_name:
+    description: Nazwa artefaktu z raportem backendu
+    value: ${{ steps.metadata.outputs.report_name }}</code></pre>
+      <details class="solution-reveal">
+        <summary>Na co uważać przy lokalnej action</summary>
+        <p>Wywołanie to <code>uses: ./.github/actions/backend-check</code>, bez <code>@ref</code>. Action korzysta z runnera i workspace callera — dlatego lokalny checkout musi już istnieć. Jeżeli przeniesiesz skrypt pomocniczy obok <code>action.yml</code>, odwołuj się do niego przez <code>github.action_path</code>; katalog kodu aplikacji to osobna rzecz.</p>
+        <p>Wartość wejścia przekaż do <code>env</code>, zweryfikuj i cytuj w Bash. Id wewnętrznego kroku nie jest widoczne w callerze: caller widzi tylko output wywołanej action.</p>
+      </details>
+      <h3>Czego się uczysz</h3>
+      <p>Composite jest reużywalną procedurą z wejściem i wynikiem, nie nowym jobem. Zamiana listy kroków na action nie powinna zmienić tego, co CI faktycznie sprawdza.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> backend wykonuje te same testy, a upload używa outputu composite. Zła konfiguracja daje czytelny błąd, a kontrolowana regresja nadal czerwony job i możliwy do pobrania raport.</div>
+    </section>
+
+    <section id="zadanie-18" data-task="18">
+      <span class="task-level">Rozszerzenie · reużywanie</span>
+      <h2>Zadanie 18 — backend jako reusable workflow</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Utwórz <code>.github/workflows/backend.yml</code> z <code>workflow_call</code>. Przenieś odpowiedzialność za cały job backendu: runner, checkout, SDK, wywołanie composite, testy i raport.</li>
+        <li>Zdefiniuj sensowne typowane inputs: <code>configuration</code> jako string, <code>publish_reports</code> jako boolean oraz <code>report_retention_days</code> jako number. Raporty mogą być opcją, ale testy zawsze muszą się wykonać. W głównym CI zostaw publikację włączoną.</li>
+        <li>Zweryfikuj wartość konfiguracji i dodatnią, dozwoloną retencję. W boolean warunku użyj <code>inputs.publish_reports</code>, a nie porównania z tekstem.</li>
+        <li>Wystaw wynik przez pełny łańcuch: krok/action → output joba → <code>on.workflow_call.outputs</code>. Caller ma móc odczytać nazwę raportu przez <code>needs.backend.outputs.report_name</code>.</li>
+        <li>W <code>ci.yml</code> wywołaj reusable na poziomie <code>jobs.backend.uses</code> z lokalną ścieżką. Ten job callera nie ma własnych <code>runs-on</code> ani <code>steps</code>. Przekaż inputs jawnie; nie dodawaj <code>secrets: inherit</code>, bo proces nie potrzebuje sekretów.</li>
+        <li>Po pierwszym runie PR odczytaj nowe nazwy checks. Zaktualizuj ochronę main do rzeczywistych nazw <strong>przed merge</strong>, gdy nowy backend przeszedł pełne sprawdzenie. Nie rób bypass starego brakującego checka.</li>
+      </ol>
+      <details class="solution-reveal">
+        <summary>Kontrakt do narysowania przed edycją</summary>
+        <pre tabindex="0" aria-label="Przepływ wyniku reusable workflow"><code class="language-text">wewnętrzny krok metadata
+  → output composite report_name
+  → output joba w backend.yml
+  → workflow_call.outputs.report_name
+  → needs.backend.outputs.report_name w ci.yml</code></pre>
+        <p>Workflow env callera nie jest automatycznie kontraktem callee. Przekaż konfigurację przez <code>with</code>. Boolean i number są typowane na wejściu workflow, ale wyjściowa nazwa artefaktu pozostaje tekstem. Uprawnienia w łańcuchu wywołań nie mogą się samodzielnie zwiększać.</p>
+      </details>
+      <h3>Czego się uczysz</h3>
+      <p>Reusable workflow przejmuje job i jego środowisko, composite tylko procedurę kroków. Publiczny interfejs wymaga jawnych inputs/outputs. Refaktor CI obejmuje także konfigurację required checks.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> caller wywołuje backend, odbiera jego nazwę raportu i pobiera plik. Retencja pochodzi z liczbowego inputu. Po błędzie testu PR nadal nie daje się scalić; po poprawce nowa konfiguracja checks nie zostawia fałszywego Expected.</div>
+    </section>
+
+    <section id="zadanie-19" data-task="19">
+      <span class="task-level">Rozszerzenie · quality gate</span>
+      <h2>Zadanie 19 — warunkowe jobs i jeden zawsze obecny gate</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Zostaw <code>ci.yml</code> uruchamiane dla <strong>każdego</strong> PR do main, bez workflow-level <code>paths</code>. Wykorzystaj job <code>changes</code> i jego kontrakt z zadania 16.</li>
+        <li>Porównaj poniższy wariant dwóch workflow ze wspólną wymaganą nazwą checka. Następnie w rozwiązaniu docelowym uruchamiaj backend i frontend według flag <code>== 'true'</code> w jednym workflow. Dla push/main i ręcznego runa zachowaj sprawdzanie obu.</li>
+        <li>Dodaj job z unikalną nazwą, np. <code>ci-required</code>, zależny od detekcji i obu komponentów. Ustaw <code>if: ${{ always() }}</code>, aby mógł ocenić także failure i skipped.</li>
+        <li>Zaimplementuj regułę z tabeli. Nie wystarczy bezwarunkowe <code>echo OK</code>: niepoprawne flagi, błąd detekcji lub nieoczekiwany skipped mają dać błąd gate'a.</li>
+        <li>Przećwicz opisane przypadki na PR-ach. Dopiero po rzeczywistych runach ustaw <strong>ten jeden gate</strong> jako wymagany zamiast warunkowych jobs i wcześniejszych nazw reusable.</li>
+      </ol>
+      <details class="solution-reveal">
+        <summary>Dwa opcjonalne workflow, jedna nazwa required — działający trik i jego granica</summary>
+        <p>Można utworzyć dwa workflow z odrębnymi filtrami paths i nadać ich jobs tę samą jawną <code>name: required</code>, nawet przy różnych identyfikatorach jobów. W regule wybierasz rzeczywistą <strong>nazwę checka</strong> <code>required</code>; sam identyczny job ID nie jest właściwym kryterium konfiguracji.</p>
+        <p>Poniższy wynik sprawdzono z ochroną obowiązującą także administratora i bez bypass. Dotyczy wyników dla tej samej sprawdzanej zmiany, przy spełnionych pozostałych regułach.</p>
+        <div class="table-scroll" role="region" aria-label="Zaobserwowane wyniki dwóch workflow ze wspólnym check name" tabindex="0">
+          <table>
+            <caption>Wymagany check name: required</caption>
+            <thead><tr><th scope="col">Uruchomione workflow</th><th scope="col">Wyniki jobs o nazwie required</th><th scope="col">Wynik próby merge</th></tr></thead>
+            <tbody>
+              <tr><td>0</td><td>Brak wyniku obu filtrów paths</td><td><code>BLOCKED</code></td></tr>
+              <tr><td>1</td><td>success</td><td><code>CLEAN</code></td></tr>
+              <tr><td>2</td><td>success + in progress</td><td><code>BLOCKED</code></td></tr>
+              <tr><td>2</td><td>success + success</td><td><code>CLEAN</code></td></tr>
+              <tr><td>2</td><td>success + failure</td><td><code>BLOCKED</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Nie jest więc prawdą, że pierwszy zielony job przykrywa trwający lub czerwony drugi. Trik wymaga jednak świadomego pokrycia przypadku <strong>zero workflow</strong>, np. przez zawsze uruchamiany jeden z tych workflow. Sam niezwiązany check o innej nazwie nie wypełni brakującego wymaganego wyniku.</p>
+        <p>Jeżeli odtwarzasz porównanie we własnym repozytorium, sprawdź wszystkie pięć przypadków i aktualne nazwy dla danego SHA. Nie zaliczaj zerowego przypadku przez wymuszony merge. W tym laboratorium docelowo wybieramy niżej opisany unikalny gate: jawniej określa politykę, obsługuje brak pracy i nie zależy od współdzielenia nazwy.</p>
+      </details>
+      <div class="table-scroll" role="region" aria-label="Reguły sprawdzania statusów przez gate" tabindex="0">
+        <table>
+          <caption>Warunki sukcesu gate'a</caption>
+          <thead><tr><th scope="col">Sprawdzana rzecz</th><th scope="col">Dopuszczalny wynik</th><th scope="col">Każdy inny wynik</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Detekcja zmian</th><td><code>success</code>, obie flagi dokładnie <code>'true'</code> albo <code>'false'</code></td><td>Błąd gate'a</td></tr>
+            <tr><th scope="row">Komponent wymagany: true</th><td><code>needs.&lt;job&gt;.result == 'success'</code></td><td>Błąd, także przy skipped/cancelled</td></tr>
+            <tr><th scope="row">Komponent niewymagany: false</th><td><code>skipped</code> zgodnie z warunkiem joba</td><td>Błąd kontraktu; wyjaśnij rozbieżność</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <details class="solution-reveal">
+        <summary>Obowiązkowe przypadki do sprawdzenia</summary>
+        <ul>
+          <li><strong>0 komponentów:</strong> zmiana tylko README/docs → dwa świadome skipped i zielony gate.</li>
+          <li><strong>1 komponent:</strong> zmiana tylko backendu, potem tylko frontendu → uruchomiony właściwy komponent, drugi skipped.</li>
+          <li><strong>2 komponenty:</strong> zmiana obu lub wspólnego workflow → obydwa muszą przejść. Sukces pierwszego, gdy drugi jeszcze pracuje, nie wystarcza.</li>
+          <li><strong>Błąd:</strong> regresja w wymaganym komponencie → czerwony gate i blokada merge, nawet gdy drugi jest zielony/skipped.</li>
+          <li><strong>Uszkodzona detekcja:</strong> brak outputu lub nieudany job changes → czerwony gate, nie dwa uznane za sukces pominięcia.</li>
+        </ul>
+        <p>Potem usuń kontrolowane błędy. Gate ma być zwykłym sprawdzeniem bieżącego SHA, nie ręcznie nadanym statusem. Przerwane lub brakujące uruchomienie nie jest dowodem sukcesu.</p>
+      </details>
+      <h3>Czego się uczysz</h3>
+      <p>Optymalizacja zakresu nie może zmieniać znaczenia „CI przeszło”. Zawsze obecny, jednoznaczny wynik oddziela politykę merge od liczby uruchomionych jobs.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> dla 0/1/2 komponentów pojawia się dokładnie właściwy gate, a każdy czerwony scenariusz blokuje merge. Brak pracy aplikacyjnej jest udokumentowanym zielonym wynikiem, nie Expected i nie okazją do force merge.</div>
+    </section>
+
+    <section id="zadanie-20" data-task="20">
+      <span class="task-level">Rozszerzenie · osobne uruchomienia</span>
+      <h2>Zadanie 20 — workflow_run i artefakt właściwego producenta</h2>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Do <code>Mission Control CI</code> dodaj mały artefakt metadanych, np. <code>ci-metadata-&lt;run_id&gt;-&lt;run_attempt&gt;</code>. JSON ma zawierać wersję schematu, SHA sprawdzanego kodu, ID runa i attempt — nie sekret, skrypt ani pełen kontekst GitHub.</li>
+        <li>Utwórz osobny <code>.github/workflows/inspect-ci.yml</code> z <code>workflow_run</code> dla nazwy producenta i typu <code>completed</code>. Najpierw wprowadź ten plik na main przez zielony PR; podobnie jak przy dispatch definicja konsumenta musi istnieć w gałęzi domyślnej.</li>
+        <li>Ogranicz konsumenta do <strong>udanego push na main z tego repozytorium</strong>. Sprawdź w payloadzie producenta <code>conclusion</code>, <code>event</code>, <code>head_branch</code>, <code>head_repository.full_name</code> oraz oczekiwany workflow. PR, fork i nieudany run nie mogą przejść tej granicy.</li>
+        <li>Nadaj konsumentowi tylko <code>actions: read</code> i, jeśli potrzebne, <code>contents: read</code>. Pobierz artefakt przez jawne <code>run-id</code> producenta i token do odczytu. Nie szukaj „ostatniego zielonego runa”.</li>
+        <li>Odczytaj JSON jako dane. Sprawdź schemat i zgodność SHA/ID/attempt z payloadem producenta. Wyświetl krótkie podsumowanie, bez checkout lub wykonywania kodu ze źródłowego PR-a.</li>
+      </ol>
+      <details class="solution-reveal">
+        <summary>Kluczowe parametry download z innego runa</summary>
+        <pre tabindex="0" aria-label="Pobranie artefaktu wskazanego przez workflow_run"><code class="language-yaml" data-embedded="github-actions"># Fragment with akcji actions/download-artifact:
+github-token: ${{ github.token }}
+run-id: ${{ github.event.workflow_run.id }}
+name: ci-metadata-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+path: received</code></pre>
+        <p><code>github.run_id</code> w konsumencie oznacza jego własny run, więc nie zastępuje <code>github.event.workflow_run.id</code>. Przy push porównujesz SHA zapisane przez producenta z <code>workflow_run.head_sha</code>, nie z późniejszym czubkiem main.</p>
+        <p><code>workflow_run</code> może działać z uprawnieniami niedostępnymi pierwotnemu PR-owi. Samo filtrowanie nazwy nie jest kontrolą zaufania. Tutaj celowo nie ma zapisu, sekretów, wykonywania pobranych plików ani przywracania cache wytworzonego przez PR.</p>
+      </details>
+      <h3>Czego się uczysz</h3>
+      <p>Niezależne runy nie mają wspólnego <code>needs</code> ani globalnych outputs. Łączysz je przez identyfikowalny artefakt i jawny kontrakt pochodzenia. Taki konsument nie zastępuje required checka na PR-ze.</p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> po zielonym push/main drugi run wskazuje dokładne ID producenta i zgodny SHA. ID obu runów są różne. Po PR lub nieudanym CI konsument nie pobiera danych w zaufanej ścieżce. Zły schemat metadanych daje błąd, a nie wykonanie ich treści.</div>
+    </section>
+
+    <section id="zadanie-21" data-task="21">
+      <span class="task-level">Rozszerzenie · CI poza aplikacją</span>
+      <h2>Zadanie 21 — prawdziwa praca LaTeX, prerelease i pełne wydanie PDF</h2>
+      <p class="task-tools"><strong>Narzędzia:</strong> publiczny szablon <a href="https://github.com/pantadeusz/pjatk_latex">pantadeusz/pjatk_latex</a>, pdfLaTeX uruchamiany przez latexmk, Biber dla bibliografii i GitHub CLI do publikacji. Lokalna instalacja LaTeX jest opcjonalna.</p>
+      <div class="callout" data-instructor-tex-contract="verified">
+        <strong>Ustalony kontrakt:</strong>
+        <p><a href="https://github.com/pantadeusz/pjatk_latex/tree/e660b9ee1e637a843c9084774abdc9b3ecdaae4c">Upstream w commicie <code>e660b9ee1e637a843c9084774abdc9b3ecdaae4c</code></a> używa pliku <code>engineer.tex</code>, lokalnej klasy <code>sprz.cls</code> i wyniku <code>engineer.pdf</code>. Budujemy przez <strong>latexmk + pdfLaTeX</strong>; bibliografię obsługuje <strong>Biber</strong>. To nie jest projekt z <code>main.tex</code> ani minted.</p>
+      </div>
+      <div class="callout warning">
+        <strong>Publiczny kod nie oznacza licencji na dowolne kopiowanie:</strong>
+        <p>Ta rewizja upstream nie zawiera wyraźnej licencji. Nie przenoś przykładowej pracy, logo ani klasy do publicznego startera/kursu i nie nadaj im własnej licencji. W tym wariancie ćwiczenia <code>thesis/</code> zawiera <strong>Twoje własne źródła</strong>, a zależność szablonu jest pobierana osobno na runnerze. PDF ma zawierać własny tekst, bez przykładowej pracy i cudzego logo.</p>
+        <p>Możesz także użyć funkcji <strong>Fork</strong> w GitHubie dla publicznego upstream i pisać tam własną treść; nie jest to zgoda na dowolny eksport lub zmianę licencji cudzych materiałów. Zachowaj informację o autorze szablonu i odnotuj prawa do używanych ilustracji oraz innych zewnętrznych treści. Nie myl tego publicznego upstream z prywatnym repozytorium prowadzącego.</p>
+      </div>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Przeczytaj przypięty przykład <a href="https://github.com/pantadeusz/pjatk_latex/blob/e660b9ee1e637a843c9084774abdc9b3ecdaae4c/engineer.tex">engineer.tex</a>, aby rozpoznać interfejs klasy. Napisz własny, niewielki dokument <code>thesis/engineer.tex</code> używający <code>sprz</code>, np. opis swojego eksperymentu CI. Nie kopiuj przykładowej pracy ani logo; pomiń makra <code>\maketitle</code>, <code>\makeprojectcard</code>, <code>\makedeclaration</code> i <code>\makethesisattachments</code>, które dodają branding lub gotowe treści.</li>
+        <li>W <code>thesis/README.md</code> zapisz autora/adres upstream, pełny SHA, informację o braku wyraźnej licencji, własne pliki źródłowe oraz polecenie budowania. Jeżeli dodajesz cytowania lub ilustracje, użyj własnej bibliografii i materiałów, do których masz odpowiednie prawa.</li>
+        <li>Utwórz <code>.github/workflows/thesis.yml</code> dla PR do main oraz push na main. W jobie kompilacji pobierz kod studenta i osobno publiczny <code>pantadeusz/pjatk_latex</code>: drugi checkout ma wskazywać pełny SHA powyżej i osobny <code>path: upstream-latex</code>, nie ruchomy main.</li>
+        <li>Oba checkouts mają nie utrwalać poświadczeń (<code>persist-credentials: false</code>). Kompilacja ma wyłącznie odczyt i nie dostaje własnych sekretów. Dla tego zadania PR kompiluje konkretny <code>pull_request.head.sha</code>, a push <code>github.sha</code>; zapisz źródłowy SHA. To celowo inny wybór niż domyślny merge ref aplikacyjnego CI.</li>
+        <li>Na runnerze <code>ubuntu-24.04</code> zainstaluj podane niżej pakiety. Wyłącznie na czas pracy runnera skopiuj niezmienioną <code>sprz.cls</code> obok własnego dokumentu w <code>thesis/</code>, zachowując nagłówek z autorstwem. Buduj własny dokument z wyłączonym shell escape; minimalny wariant nie potrzebuje bibliografii ani ilustracji upstream.</li>
+        <li>Sprawdź niepusty <code>thesis/engineer.pdf</code> i udostępnij dokładnie ten plik jako artefakt runa <strong>tylko po udanej kompilacji</strong>, nie przez bezwarunkowe <code>always()</code> z zadania o raportach testów. Nie wysyłaj całego katalogu upstream ani nie commituj pobranej klasy, przykładów, logo czy wyników TeX. Przy lokalnym powtórzeniu ignoruj roboczą <code>thesis/sprz.cls</code>, katalog <code>upstream-latex/</code> i wyniki kompilacji.</li>
+        <li>Dodaj <strong>osobne jobs publikacji, bez checkout</strong>, które tylko pobierają PDF z tego samego runa i tworzą wydanie. Tylko one otrzymują <code>contents: write</code>; <code>GH_TOKEN</code> jest dostępny jedynie w kroku CLI. SHA docelowego taga pochodzi ze zdarzenia, nie z dowolnego pliku w artefakcie.</li>
+        <li><strong>Najpierw bootstrap na main:</strong> PR dodający lub zmieniający workflow ma kompilować i zachowywać artefakt, ale pomijać prerelease z czytelnym komunikatem. Sprawdź go i scal definicję na main. <code>GITHUB_TOKEN</code> nie może utworzyć wydania wskazującego commit PR-a z inną zawartością <code>.github/workflows</code> niż gałąź domyślna.</li>
+        <li>Od aktualnego main utwórz <strong>nowy PR zmieniający tylko własne pliki TeX</strong>. Dla PR-a z tego samego repozytorium publikuj prerelease, np. z tagiem <code>thesis-pr-&lt;numer-PR&gt;-run-&lt;run_id&gt;-attempt-&lt;run_attempt&gt;</code>. Dla push/main publikuj pełne wydanie, np. <code>thesis-v1.&lt;run_id&gt;.&lt;run_attempt&gt;</code>. Oba muszą zawierać PDF jako <strong>asset w Releases</strong>.</li>
+        <li>Pobierz PDF z prerelease, popraw własny tekst i sprawdź kolejne odrębne wydanie. Po zielonym PR i merge pobierz PDF pełnego wydania. Sprawdź także błąd kompilacji oraz PR zmieniający workflow: pierwszy ma być czerwony bez wydania, drugi może być zielony, ale artefakt-only z wyjaśnieniem.</li>
+      </ol>
+      <details class="solution-reveal">
+        <summary>Minimalny własny dokument — bez cudzej pracy i stron z brandingiem</summary>
+        <p>To autorski punkt wyjścia dla <code>thesis/engineer.tex</code>. Zastąp treść swoim opisem; nie jest to fragment przykładowej pracy upstream. Sama klasa nie dodaje automatycznie stron tytułowych, deklaracji ani załączników.</p>
+        <pre tabindex="0" aria-label="Punkt wyjścia do własnego dokumentu LaTeX"><code class="language-latex">\documentclass{sprz}
+\begin{document}
+\chapter{Raport z laboratorium CI}
+\section{Cel}
+Sprawdzam, czy zmiana mojego tekstu daje nowe wydanie PDF.
+\section{Wynik}
+Tutaj opiszę własne uruchomienie oraz wnioski z eksperymentu.
+\end{document}</code></pre>
+        <p>W tym wariancie nie wywołuj makr bibliografii ani nie dodawaj obrazów upstream. Brak logo i gotowej pracy w PDF nie oznacza nadania klasie swobodnej licencji — zachowaj opis pochodzenia i ograniczeń w swoim README.</p>
+      </details>
+      <details class="solution-reveal command-cheatsheet">
+        <summary>Pakiety Ubuntu 24.04 i dokładne polecenie kompilacji</summary>
+        <p>To komendy joba na standardowym <code>ubuntu-24.04</code>, nie polecenia do uruchomienia w Windows. Pakiety obejmują polski skład, klasę i bibliografię tego konkretnego szablonu.</p>
+        <pre tabindex="0" aria-label="Pakiety Ubuntu 24.04 dla przypiętego szablonu LaTeX"><code class="language-bash">sudo apt-get update
+sudo apt-get install -y latexmk biber texlive-latex-extra \
+  texlive-bibtex-extra texlive-fonts-recommended \
+  texlive-lang-polish texlive-science</code></pre>
+        <p>Po dwóch checkoutach, z korzenia workspace; dokument studenta musi już istnieć. Kopia klasy powstaje tylko w roboczym workspace, nie w historii kursu ani startera.</p>
+        <pre tabindex="0" aria-label="Kompilacja własnego dokumentu z przypiętą klasą upstream"><code class="language-bash">cp upstream-latex/sprz.cls thesis/sprz.cls
+cd thesis
+rm -f engineer.pdf
+latexmk -norc -pdf -interaction=nonstopmode -halt-on-error -file-line-error -no-shell-escape engineer.tex
+test -s engineer.pdf</code></pre>
+        <p>Usuwasz wyłącznie ewentualny poprzedni <code>engineer.pdf</code>, aby sprawdzić nowy wynik. <code>-norc</code> pomija pliki konfiguracyjne latexmk, <code>-halt-on-error</code> zatrzymuje błędną kompilację, a <code>-no-shell-escape</code> nie pozwala dokumentowi uruchamiać poleceń powłoki. Nie usuwaj tych ograniczeń jako „naprawy” CI. Biber jest narzędziem bibliografii tego szablonu, choć minimalny dokument bez cytowań go nie uruchomi. Nie zastępuj komendy samym <code>make</code>: upstream wywołuje niejawny domyślny tryb latexmk, a tutaj wymagamy PDF.</p>
+      </details>
+      <details class="solution-reveal">
+        <summary>Mały przykład operacji publikacji, nie całego workflow</summary>
+        <p>Zmienne pochodzą z uprzednio zweryfikowanych metadanych. <code>PDF_PATH</code> to znana ścieżka do odebranego PDF, a nie plik skryptu. Dla pełnego wydania użyj odrębnego taga i wywołania bez <code>--prerelease</code> oraz bez <code>--latest=false</code>.</p>
+        <pre tabindex="0" aria-label="Publikacja PDF jako asset prerelease"><code class="language-bash">gh release create "$TAG" "$PDF_PATH#Praca dyplomowa PDF" \
+  --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" \
+  --title "$RELEASE_TITLE" --notes "$RELEASE_NOTES" --prerelease --latest=false</code></pre>
+        <p><code>--target</code> wskazuje dokładny commit Twojego dokumentu, nie aktualny main ani pin zewnętrznego szablonu. SHA upstream opisuje zależność i nie musi istnieć w repozytorium studenta. Nie przenoś istniejących tagów i nie nadpisuj wydań/assetów: run ID i attempt zapewniają nowe nazwy także przy immutable releases.</p>
+        <p>Wydanie utworzone za pomocą <code>GITHUB_TOKEN</code> nie uruchamia kolejnych workflow przez <code>on: release</code>. Nie opieraj na takim zdarzeniu dowodu działania ćwiczenia.</p>
+      </details>
+      <details class="solution-reveal">
+        <summary>Warunki zapisu: TeX-only, workflow-editing i fork PR</summary>
+        <ul>
+          <li>Prerelease: udana kompilacja, zdarzenie <code>pull_request</code>, baza main, <code>github.event.pull_request.head.repo.full_name == github.repository</code> oraz zgodna z main zawartość <code>.github/workflows</code> w źródłowym commicie. Samo <code>head.repo.fork == false</code> nie sprawdza tożsamości repozytorium.</li>
+          <li>Kontrolę zmian workflow wykonaj bez uprawnień zapisu. Wykorzystaj paginację z zadania 16; pamiętaj także o PR-ze starszym niż aktualny main. Potwierdź zgodność drzew <code>.github/workflows</code> dla obu commitów, nie tylko brak tej ścieżki na liście zmian od początku PR-a. Niepotwierdzona zgodność oznacza artefakt-only, nigdy próbę eskalacji tokenu.</li>
+          <li>PR zmieniający workflow: pomiń publikację i dodaj jawny komunikat, np. przez <code>core.notice</code>. Po merge do main utwórz świeży TeX-only PR. Nie obchodź ograniczenia wydawania przez PAT z szerszymi uprawnieniami ani tag wskazujący inne źródło niż PDF.</li>
+          <li>Pełne wydanie: udana kompilacja, zdarzenie <code>push</code> i dokładnie <code>refs/heads/main</code>. Push samego taga nie jest tym zdarzeniem.</li>
+          <li>Fork PR: kompilacja i artefakt mogą działać bez sekretów; <strong>oba jobs publikacji mają być skipped</strong>. Przy zewnętrznym współtwórcy GitHub może wymagać zatwierdzenia uruchomienia przez opiekuna repozytorium.</li>
+          <li>PR Dependabota także pozostaje artefakt-only ze względu na ograniczony token. Sprawdź autora PR-a (<code>github.event.pull_request.user.login</code>), nie tylko osobę klikającą rerun.</li>
+          <li>Nie używaj <code>pull_request_target</code> do kompilacji PR-a z tokenem zapisu. Nie wykonuj skryptów ani kodu z artefaktu w jobie publikacji.</li>
+          <li>Zachowaj osobne nazwy artefaktów dla run/attempt. Błędny build nie może opublikować PDF pozostałego po innej kompilacji; pobieraj wyłącznie dokładny artefakt tego udanego joba.</li>
+        </ul>
+      </details>
+      <h3>Czego się uczysz</h3>
+      <p>Continuous Integration może sprawdzać pracę dyplomową, a wydanie może publikować dokument. Kompilacja, przechowanie raportu i utworzenie wersjonowanego assetu to różne operacje z różnymi uprawnieniami. <strong>Pełny release PDF nie wdraża aplikacji.</strong></p>
+      <div class="callout"><strong>Sprawdź w GitHub:</strong> w <strong>Releases</strong> jest prerelease z TeX-only PR-a i odrębne pełne wydanie po push/main; oba zawierają otwierający się PDF własnego tekstu i właściwy tag/SHA. Rerun nie koliduje z poprzednim tagiem. PR z forka oraz PR zmieniający workflow kończą się bez zapisu wydania, z artefaktem po udanej kompilacji i czytelną przyczyną pominięcia. W repozytorium nie ma skopiowanej pracy ani logo upstream. Sam link do artefaktu runa nie zalicza publikacji wydania.</div>
+    </section>
+
+    <section id="zadanie-22" data-task="22">
+      <span class="task-level">Finał · ręczny eksperyment</span>
+      <h2>Zadanie 22 — statyczna macierz Debug / Release</h2>
+      <p>Macierze zostawiamy na koniec: w tym projekcie są rzadziej potrzebnym narzędziem porównania wariantów, nie powodem do przebudowy zwykłego CI aplikacji.</p>
+      <div class="callout"><strong>Osobny proces:</strong> zadania 22–23 wykonujesz w ręcznym <code>.github/workflows/matrix.yml</code>, np. nazwanym <code>Matrix lab</code>. Nie dodawaj jego jobs ani podsumowania do required checks PR-a. Wymagany gate i ochrona main z zadania 19 pozostają aktywne i działają niezależnie.</div>
+      <h3>Zrób</h3>
+      <ol>
+        <li>Utwórz <code>matrix.yml</code> wyzwalane tylko przez <code>workflow_dispatch</code>. Dodaj job <code>static_tests</code> ze statyczną macierzą Debug/Release, <code>fail-fast: false</code> i <code>max-parallel: 2</code>. Każdy wariant używa <code>ubuntu-24.04</code> i SDK z global.json, bez dodatkowych systemów ani wersji SDK.</li>
+        <li>Po checkout i setup-dotnet wykorzystaj procedurę backendu z zadania 17, przekazując <code>matrix.configuration</code>. Każdy wariant wykonuje locked restore, build i wszystkie testy Testcontainers. Nie uzależniaj testów od tego, czy chcesz pobrać raport.</li>
+        <li>Uploaduj raporty z unikalnymi nazwami, np. <code>static-&lt;konfiguracja&gt;-&lt;run_id&gt;-&lt;run_attempt&gt;</code>, także po nieudanym teście. Lokalna ścieżka TRX może być wspólna dla oddzielnych runnerów; nazwy artefaktów w jednym runie nie mogą kolidować.</li>
+        <li>Dodaj job <code>matrix_summary</code> z nazwą <code>Matrix summary</code>, <code>needs: static_tests</code> i <code>if: ${{ always() }}</code>. Ma zakończyć się sukcesem tylko wtedy, gdy wynik całej grupy <code>static_tests</code> jest <code>success</code>; failure, cancelled lub nieoczekiwany skipped to nie sukces.</li>
+        <li>Wprowadź definicję workflow na main przez PR z działającym CI z zadania 19. Dopiero potem użyj <strong>Actions → Matrix lab → Run workflow</strong>, zgodnie z bootstrapem z zadania 4.</li>
+        <li>Na osobnej gałęzi ćwiczeniowej dodaj po testach kontrolowany błąd wyłącznie w wariancie Debug. Ręcznie uruchom workflow <em>z tej gałęzi</em>, sprawdź wynik Release, podsumowanie i czerwony run. Usuń błąd kolejnym commitem i powtórz ręczne uruchomienie. Nie przedstawiaj wyniku manualnego jako dowodu blokady merge PR-a.</li>
+      </ol>
+      <pre tabindex="0" aria-label="Statyczna strategia macierzy backendu"><code class="language-yaml">strategy:
+  fail-fast: false
+  max-parallel: 2
+  matrix:
+    configuration: [Debug, Release]</code></pre>
+     <details class="solution-reveal">
+       <summary>Kontrolowany błąd tylko w Debug — usuń po eksperymencie</summary>
+       <p>Dołóż ten krok po rzeczywistych testach na gałęzi ćwiczeniowej, nie w stabilnej wersji main. Nie wyłączaj testów ani propagacji błędów.</p>
+       <pre tabindex="0" aria-label="Kontrolowany błąd wariantu Debug"><code class="language-yaml" data-embedded="github-actions">- name: Kontrolowany błąd Debug
+  if: ${{ matrix.configuration == 'Debug' }}
+  shell: bash
+  run: exit 1</code></pre>
+     </details>
+     <details class="solution-reveal">
+       <summary>Wariant porównawczy: include/exclude i zbieranie raportów</summary>
+       <p>Zamiast prostej dwuelementowej macierzy możesz porównać poniższe trzy warianty. <code>collect_reports</code> steruje wyłącznie uploadem, a <code>diagnostics</code> dodatkowym krokiem, np. <code>dotnet --info</code>. Wszystkie warianty nadal uruchamiają komplet testów.</p>
+       <pre tabindex="0" aria-label="Opcjonalna macierz konfiguracji i zbierania raportów"><code class="language-yaml">strategy:
+  fail-fast: false
+  max-parallel: 2
+  matrix:
+    configuration: [Debug, Release]
+    collect_reports: [true, false]
+    exclude:
+      - configuration: Debug
+        collect_reports: false
+    include:
+      - configuration: Release
+        collect_reports: true
+        diagnostics: true</code></pre>
+       <p><strong>Sprawdź:</strong> pojawiają się Debug/z raportem, Release/z raportem i Release/bez uploadu. Nie ma Debug/bez raportu, a diagnostyka działa tylko dla Release/z raportem. Dodaj wybór raportowania do nazw jobs; nie oznaczaj braku uploadu jako braku wykonanych testów. To porównanie w ręcznym workflow, nie kolejny obowiązkowy proces dla każdego PR-a.</p>
+     </details>
+     <h3>Czego się uczysz</h3>
+     <p>Matrix powiela job, a nie dysk. <code>fail-fast: false</code> pozwala zebrać wyniki pozostałych wariantów po błędzie; <code>max-parallel</code> ogranicza równoległość tej grupy. Include może dopisać metadane pasującej kombinacji, a exclude usuwa wybrane kombinacje.</p>
+     <div class="callout"><strong>Sprawdź w GitHub:</strong> Debug i Release wykonują prawdziwe testy i mają odrębne wyniki. Kontrolowany błąd Debug daje czerwone <code>Matrix summary</code> i cały ręczny workflow, mimo sukcesu Release; po poprawce wynik jest zielony. Required CI z zadania 19 nadal chroni PR-y, ale ręczna macierz nie jest wymaganym checkiem.</div>
+   </section>
+
+   <section id="zadanie-23" data-task="23">
+     <span class="task-level">Finał · ostatnie zadanie</span>
+     <h2>Zadanie 23 — dynamiczna macierz z outputu JSON</h2>
+     <h3>Zrób</h3>
+     <ol>
+       <li>W tym samym <code>matrix.yml</code> dodaj do <code>workflow_dispatch</code> input <code>include-debug</code> typu <code>boolean</code>, domyślnie false. Wprowadź zmianę definicji na main przez zwykły PR, aby formularz ręcznego uruchomienia miał aktualne wejście.</li>
+       <li>Dodaj job <code>plan</code>. W kroku <code>github-script</code> z <code>id: matrix</code> przekaż input przez <code>env</code>, np. <code>INCLUDE_DEBUG: ${{ inputs['include-debug'] }}</code>. W środowisku to już tekst: zaakceptuj wyłącznie <code>'true'</code> lub <code>'false'</code>, a inną wartość odrzuć.</li>
+       <li>Zbuduj obiekt z tablicą <code>include</code>. Zawsze dodaj <code>{configuration: 'Release', lane: 'release'}</code>; przy true dodaj <code>{configuration: 'Debug', lane: 'debug'}</code>. Zweryfikuj liczbę wpisów, dozwolone konfiguracje i unikalne, zgodne z nimi lane. Nie potrzebujesz pustego planu: Release jest zawsze obecny.</li>
+       <li>Zapisz wynik przez <code>core.setOutput('matrix', JSON.stringify(plan))</code> i wystaw go jako output joba. Waliduj plan <em>przed</em> publikacją outputu, zamiast przekazywać niepoprawny JSON do planowania GitHuba.</li>
+       <li>Dodaj job <code>dynamic_tests</code> z <code>needs: plan</code> i macierzą z <code>fromJSON</code>. Uruchamiaj go tylko po sukcesie planu. Zachowaj <code>ubuntu-24.04</code>, <code>fail-fast: false</code>, <code>max-parallel: 2</code> i rzeczywiste testy backendu. Nadaj raportom nazwy <code>dynamic-&lt;lane&gt;-&lt;run_id&gt;-&lt;run_attempt&gt;</code>.</li>
+       <li>Rozszerz <code>matrix_summary</code>: ma zawsze się uruchamiać, zależeć od <code>plan</code> i <code>dynamic_tests</code> oraz kończyć sukcesem tylko po sukcesie obu. Jeżeli pozostawiasz grupę statyczną do porównania, uwzględnij także jej wynik. To nadal podsumowanie ręcznego workflow, nie wymagany gate PR.</li>
+       <li>Porównaj ręczne uruchomienia z false i true. Na gałęzi ćwiczeniowej sprawdź też niedozwolony wpis planu, np. konfigurację <code>Preview</code>, oraz kontrolowany błąd wariantu Debug przy true. Obie próby mają dać czerwone podsumowanie. Usuń kontrolowane błędy i pozostaw działający wariant.</li>
+     </ol>
+     <details class="solution-reveal">
+       <summary>Kontrakt planu przy include-debug=true</summary>
+       <p>Przy false tablica zawiera wyłącznie pierwszy wpis. Input naprawdę wybiera dodatkowe wykonanie testów; nie jest sztuczną flagą służącą tylko do wypisania typu.</p>
+       <pre tabindex="0" aria-label="Plan dynamicznej macierzy Release i Debug"><code class="language-json">{
+  "include": [
+    {"configuration": "Release", "lane": "release"},
+    {"configuration": "Debug", "lane": "debug"}
+  ]
+}</code></pre>
+       <p>Dozwolone są dokładnie te pary. Brak Release, powtórzone lane albo inna konfiguracja to błąd producenta. <code>fromJSON</code> konwertuje tekst do obiektu, ale nie zastępuje tej walidacji.</p>
+     </details>
+     <details class="solution-reveal">
+       <summary>Dwa miejsca mapowania: output planu i strategy konsumenta</summary>
+       <p>Najpierw wystaw wynik kroku na poziomie joba <code>plan</code>:</p>
+       <pre tabindex="0" aria-label="Wystawienie JSON jako outputu joba plan"><code class="language-yaml" data-embedded="github-actions">outputs:
+  matrix: ${{ steps.matrix.outputs.matrix }}</code></pre>
+       <p>Następnie użyj go w jobie <code>dynamic_tests</code>. Warunek po sukcesie planu zapobiega rozwijaniu macierzy z brakującego outputu:</p>
+       <pre tabindex="0" aria-label="Dynamiczna strategia po sukcesie planu"><code class="language-yaml" data-embedded="github-actions">needs: plan
+if: ${{ needs.plan.result == 'success' }}
+strategy:
+  fail-fast: false
+  max-parallel: 2
+  matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}</code></pre>
+       <p>W odrębnym jobie <code>matrix_summary</code> pozostaw <code>if: ${{ always() }}</code> i sprawdź wyniki jego zależności. Gdy walidacja planu zawiedzie, <code>dynamic_tests</code> będzie skipped, ale podsumowanie ma być czerwone z powodu błędu planu.</p>
+     </details>
+     <details class="solution-reveal">
+       <summary>Jak pogrupować porównanie bez powielania CI dla każdego PR-a</summary>
+       <p>Możesz pozostawić <code>static_tests</code> i <code>dynamic_tests</code> obok siebie w jednym ręcznym workflow. Wtedy podsumowanie sprawdza wszystkie skonfigurowane grupy, a <code>max-parallel: 2</code> dotyczy każdej grupy osobno. Prefiksy <code>static-</code> i <code>dynamic-</code> rozdzielają raporty.</p>
+       <p>Jeśli zadanie 22 jest już udokumentowane, możesz w ćwiczeniu 23 zastąpić grupę statyczną dynamiczną i odpowiednio uprościć <code>needs</code> podsumowania. Nie zmieniaj zwykłego <code>ci.yml</code>, detekcji zmian ani reguł ochrony PR z zadania 19.</p>
+     </details>
+     <h3>Czego się uczysz</h3>
+     <p>Typowany input wybiera warianty, poprzedni job publikuje zweryfikowany plan jako tekst, a <code>fromJSON</code> odtwarza strukturę macierzy. Jawne lane porządkują raporty, a zawsze obecne podsumowanie pokazuje także błąd planowania.</p>
+     <div class="callout"><strong>Sprawdź w GitHub:</strong> przy false grupa dynamiczna ma tylko Release; przy true ma Release i Debug. Zły plan oraz nieudany wariant dają czerwone <code>Matrix summary</code> i ręczny workflow. Raporty są rozróżnialne, a ochrona PR nadal korzysta wyłącznie ze zwykłego CI. To ostatnie zadanie implementacyjne — przejdź do <a href="#weryfikacja">kryteriów ukończenia</a>.</div>
+   </section>
+
+   <section id="weryfikacja">
+     <h2>Oddanie i kryteria ukończenia</h2>
+     <p>W README swojego repozytorium prowadź krótki dziennik: numer zadania, PR/run, SHA, oczekiwany i zaobserwowany rezultat. Nie kopiuj logów z sekretami ani całych raportów do Gita. Poniższa lista podsumowuje wykonane zadania; nie dodaje nowych etapów implementacji.</p>
+     <details class="solution-reveal">
+       <summary>Kryteria rdzenia — zadania 1–13</summary>
+       <ul class="checklist">
+         <li>Pierwszy własny workflow ma czytelne kroki; odróżniasz zdarzenie, run, job i step.</li>
+         <li>Działają PR do main, push na main i ręczne uruchomienie z konfiguracją oraz diagnostyką.</li>
+         <li>W repozytorium są trzy samodzielnie wygenerowane lockfiles; lokalny i zdalny build/test przechodzą bez osłabiania testów.</li>
+         <li>Backend i frontend są osobnymi równoległymi jobs; widać regresję aplikacji i osobno błąd nieaktualnego lockfile, a potem poprawki.</li>
+         <li>Raport nieudanego testu można pobrać; workflow pozostaje czerwony.</li>
+         <li>Main wymaga PR i rzeczywistych checks. Masz dowód blokady, bez użycia bypass.</li>
+         <li>Cache ma udokumentowane cold/warm/zmianę lockfile; instalacja i testy nie zależą od trafienia w cache.</li>
+         <li>Brak prawdziwych sekretów w kodzie, logach, outputs i artefaktach; testy API działają także bez sekretu ćwiczeniowego.</li>
+       </ul>
+     </details>
+     <details class="solution-reveal">
+       <summary>Kryteria rozszerzenia — zadania 14–23</summary>
+       <ul class="checklist">
+         <li>Umiesz prześledzić metadane i pliki przez krok, job, composite, reusable i osobny run.</li>
+         <li>Zmiany PR-a są pobierane z paginacją, a komentarz zapisuje tylko uprawniony job dla PR-a z tego repozytorium.</li>
+         <li>Wymagany gate z zadania 19 obsługuje 0/1/2 komponenty i nie akceptuje błędu ani nieoczekiwanego pominięcia.</li>
+         <li>Konsument workflow_run pobiera artefakt właściwego producenta i odrzuca nieuprawnione źródło.</li>
+         <li>Przypięty szablon LaTeX z własną treścią daje PDF, prerelease z PR-a oraz pełne wydanie z main; pochodzenie i ograniczenia praw do materiałów upstream są opisane, bez kopiowania cudzej pracy ani logo.</li>
+         <li>Ręczne macierze sprawdzają rzeczywiste konfiguracje backendu. Masz porównanie include-debug=false/true, odrębne raporty i czerwone podsumowanie dla błędu wariantu oraz błędnego planu.</li>
+         <li>W wybranym wariancie include/exclude potrafisz wskazać usuniętą kombinację i dodane metadane; wyłączenie uploadu nie pomija testów.</li>
+         <li>Manualne jobs macierzy nie są required checks PR-a. Ochrona main z zadania 19 pozostaje aktywna.</li>
+       </ul>
+     </details>
+   </section>
+
+   <section id="diagnostyka">
+     <h2>Ściąga diagnostyczna</h2>
+     <details class="solution-reveal command-cheatsheet">
+       <summary>Run nie istnieje, jest czerwony albo wymagany check czeka</summary>
+       <ul>
+         <li><strong>Brak runa:</strong> sprawdź ścieżkę <code>.github/workflows/*.yml</code>, poprawność YAML, włączenie Actions, zdarzenie i filtr gałęzi. W PR filtr dotyczy <em>bazy</em>. Unikaj znaczników typu <code>[skip ci]</code> w commitach wymagających CI.</li>
+         <li><strong>Brak Run workflow:</strong> definicja z <code>workflow_dispatch</code> musi najpierw znaleźć się w gałęzi domyślnej; patrz zadanie 4. Po aktualizacji formularza macierzy sprawdź także obecność nowego inputu na main.</li>
+         <li><strong>Nie ma plików:</strong> checkout musi działać w każdym jobie, który potrzebuje kodu. Katalog z poprzedniego runnera nie jest współdzielony.</li>
+         <li><strong>Nie ma raportu:</strong> przy błędzie restore/build test nie został uruchomiony. <code>always()</code> nie tworzy brakującego pliku. Sprawdź też ścieżkę od korzenia workspace, nie od <code>defaults.run.working-directory</code>. W porównawczej macierzy sprawdź, czy świadomie wyłączono upload.</li>
+         <li><strong>Cache hit, a instalacja nie działa:</strong> sprawdź manifest, lockfile, wersję narzędzia i rejestr. Cache to paczki do ponownego użycia, nie dowód poprawności zależności.</li>
+         <li><strong>Resource not accessible by integration:</strong> sprawdź <code>permissions</code>, pochodzenie PR-a i politykę organizacji. Nie rozwiązuj tego przez <code>pull_request_target</code> wykonujący kod PR-a.</li>
+         <li><strong>Expected/Pending na PR:</strong> porównaj wymaganą nazwę z checkiem dla bieżącego SHA. Po refaktorze reusable odczytaj nowe nazwy. Nie dodawaj ręcznego <code>Matrix summary</code> jako warunku merge i nie myl brakującego workflow z jobem zakończonym jako <em>skipped</em>.</li>
+         <li><strong>Dynamiczna grupa jest skipped:</strong> sprawdź log i walidację joba plan. Nie próbuj naprawiać błędnego outputu przez bezwarunkowy sukces podsumowania.</li>
+         <li><strong>Pierwszy czerwony krok:</strong> przeczytaj komunikat przed poprawką. Rerun jest przydatny przy problemie przejściowym; błąd kodu lub konfiguracji naprawia nowy commit.</li>
+       </ul>
+     </details>
+   </section>
+
+   <section id="pytania">
+     <h2>Pytania do samokontroli</h2>
+     <p>Nie są dodatkowymi zadaniami do implementacji. Użyj ich podczas przygotowania krótkiego wyjaśnienia swojego rozwiązania.</p>
+     <ol class="self-check">
+       <li>Dlaczego checkout, SDK i zależności przygotowujesz ponownie w drugim jobie?<details><summary>Sprawdź rozumowanie</summary><p>Job otrzymuje osobny runner i workspace. Zależność <code>needs</code> przenosi kolejność i wystawione outputs, ale nie pliki ani procesy.</p></details></li>
+       <li>Czy cache pozwala pominąć locked restore lub testy?<details><summary>Sprawdź rozumowanie</summary><p>Nie. Cache może zawierać tylko część paczek, pochodzić ze starszego klucza albo nie istnieć. Lockfile i instalacja weryfikują zależności, a testy zachowanie aplikacji.</p></details></li>
+       <li>Dlaczego adnotacja błędu i pobrany raport nie wystarczają do zablokowania merge?<details><summary>Sprawdź rozumowanie</summary><p>Proces musi zwrócić niezerowy kod, a odpowiedni check musi być wymagany przez aktywną regułę. Artefakt jest dowodem, nie polityką ochrony. Ręczne ćwiczenie macierzy nie jest takim wymaganym checkiem.</p></details></li>
+       <li>Co oznacza output o wartości <code>'false'</code>?<details><summary>Sprawdź rozumowanie</summary><p>To tekst. Sprawdzaj go jawnie, np. <code>== 'true'</code>, albo konwertuj zweryfikowany JSON. Nie traktuj niepustego tekstu jako flagi logicznej.</p></details></li>
+       <li>Po co unikalny gate, skoro dwa workflow mogą używać tej samej wymaganej nazwy checka?<details><summary>Sprawdź rozumowanie</summary><p>W sprawdzonym wariancie wspólnej nazwy jeden sukces wystarcza, gdy ruszył tylko jeden workflow; gdy ruszyły oba, pending albo failure drugiego nadal blokuje merge. Problemem pozostaje zero uruchomionych workflow: wymagany wynik nie istnieje. Stały, unikalny gate potrafi jawnie zaakceptować świadomy brak pracy oraz odrzucić błąd detekcji i nieoczekiwany skipped.</p></details></li>
+       <li>Czym różnią się artefakt Actions i asset GitHub Release?<details><summary>Sprawdź rozumowanie</summary><p>Artefakt należy do runa i ma retencję. Asset wydania jest dostępny przy konkretnym tagu w Releases. Publikacja PDF nie oznacza wdrożenia aplikacji.</p></details></li>
+       <li>Dlaczego kompilator TeX nie powinien otrzymać tokenu zapisu?<details><summary>Sprawdź rozumowanie</summary><p>Źródło PR-a jest kodem wejściowym dla narzędzia, nie zaufaną instrukcją administracyjną. Kompilacja i publikacja mają osobne jobs; zapis jest dozwolony tylko dla zatwierdzonego rodzaju zdarzenia i repozytorium.</p></details></li>
+       <li>Co identyfikuje raport z macierzy?<details><summary>Sprawdź rozumowanie</summary><p>Grupa static/dynamic, konfiguracja lub lane oraz run/attempt. Jeden wspólny output matrix joba nie jest listą wyników wszystkich wariantów.</p></details></li>
+       <li>Dlaczego ręcznego Matrix summary nie dodajemy do wymaganych checks PR-a?<details><summary>Sprawdź rozumowanie</summary><p>Manualny eksperyment nie uruchamia się automatycznie dla każdej zmiany PR-a, więc mógłby pozostawić brakujący wymagany wynik. Przed merge kod sprawdza zwykłe CI i gate z zadania 19; podsumowanie macierzy ocenia tylko swój ręczny run.</p></details></li>
+     </ol>
+   </section>
+  </article>
+</main>
+<footer class="footer"><div class="shell">TDO · Laboratorium 02 · CI i GitHub Actions · <a href="../../index.html">Powrót do kursu</a></div></footer>
+<script src="../../assets/js/site.js"></script>
+<script src="lab.js"></script>
+</body>
+</html>

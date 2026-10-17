@@ -1,0 +1,2974 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Wykład 02: SDLC, strategie gałęzi i GitHub Actions. Od pierwszego workflow przez skrypty, przepływ danych i cache do wymaganych checks oraz publikacji PDF.">
+  <title>CI i SDLC · Technologie DevOps</title>
+  <link rel="stylesheet" href="../docker/slides.css">
+  <link rel="stylesheet" href="../../assets/css/presentations.css">
+  <link rel="stylesheet" href="../../assets/css/code-highlighting.css">
+  <link rel="stylesheet" href="slides.css">
+  <noscript><style>html,body{height:auto;overflow:auto}.ci-deck .deck{height:auto}.ci-deck .slide{display:block;height:auto;min-height:100vh}.ci-deck .hud,.ci-deck .lecture-nav{display:none}</style></noscript>
+</head>
+<body class="ci-deck">
+<nav class="lecture-nav" aria-label="Nawigacja po sekcjach wykładu">
+  <details class="presentation-picker section-picker">
+    <summary><span data-current-section>01 · SDLC i CI</span></summary>
+    <nav aria-label="Sekcje wykładu">
+      <a href="#1" data-section-link="sdlc">01 · SDLC i CI</a>
+      <a href="#7" data-section-link="git">02 · Strategie gałęzi</a>
+      <a href="#14" data-section-link="platformy">03 · Platformy CI</a>
+      <a href="#17" data-section-link="yaml">04 · YAML i pierwszy workflow</a>
+      <a href="#29" data-section-link="wykonanie">05 · Model wykonania</a>
+      <a href="#40" data-section-link="zdarzenia">06 · Zdarzenia i rewizje</a>
+      <a href="#49" data-section-link="wejscia">07 · Wejścia i konteksty</a>
+      <a href="#56" data-section-link="wyrazenia">08 · Wyrażenia</a>
+      <a href="#66" data-section-link="skrypty">09 · Skrypty i API</a>
+      <a href="#78" data-section-link="reuse">10 · Wspólne procedury</a>
+      <a href="#83" data-section-link="dane">11 · Przepływ danych</a>
+      <a href="#97" data-section-link="matrix">12 · Matrix</a>
+      <a href="#103" data-section-link="build">13 · Powtarzalne buildy i cache</a>
+      <a href="#111" data-section-link="checks">14 · Checks i reguły merge</a>
+      <a href="#121" data-section-link="bezpieczenstwo">15 · Bezpieczeństwo i utrzymanie</a>
+      <a href="#127" data-section-link="dokumenty">16 · LaTeX i inne zastosowania</a>
+    </nav>
+  </details>
+  <span class="section-position" data-section-position aria-live="polite"></span>
+  <div class="section-jumps">
+    <a data-section-prev aria-label="Poprzednia sekcja" aria-disabled="true">← Sekcja</a>
+    <a href="#7" data-section-next aria-label="Następna sekcja">Sekcja →</a>
+  </div>
+</nav>
+<main class="deck" aria-label="Wykład 02 — CI i SDLC">
+
+  <section class="slide section-opening" id="ci-sdlc" data-title="CI i SDLC" data-section="sdlc" data-section-start data-section-title="SDLC i CI">
+    <div class="content">
+      <div class="kicker">Technologie DevOps // Wykład 02 // 01</div>
+      <h1>CI i <span class="accent">SDLC</span></h1>
+      <p class="lead">Od zmiany w kodzie do informacji, której zespół może zaufać.</p>
+      <div class="section-topics"><span>Cykl życia</span><span>Informacja zwrotna</span><span>Rodzaje testów</span></div>
+      <p>Najpierw proces. Potem pierwszy działający workflow, jego mechanizmy i reguły bezpiecznej integracji.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="sdlc-petla" data-title="SDLC — cykl życia oprogramowania" data-section="sdlc">
+    <div class="content">
+      <div class="kicker">Software Development Life Cycle</div>
+      <h2>Rozwój to <span class="accent">pętla</span></h2>
+      <div class="two ring-layout">
+        <svg class="sdlc-ring" viewBox="0 0 500 500" role="img" aria-labelledby="sdlc-title sdlc-desc">
+          <title id="sdlc-title">Sześć etapów cyklu życia oprogramowania</title>
+          <desc id="sdlc-desc">Zgodnie z ruchem wskazówek zegara: planowanie, analiza wymagań, projekt, implementacja, testy, wydanie i utrzymanie. Informacja z utrzymania wraca do planowania; wyniki testów mogą cofnąć pracę do projektu lub implementacji.</desc>
+          <g class="ring-segments" aria-hidden="true">
+            <path fill="#f2c14e" d="M258 30 A220 220 0 0 1 436 133 L353 185 A122 122 0 0 0 254 128 Z"/>
+            <path fill="#f29b38" d="M258 30 A220 220 0 0 1 436 133 L353 185 A122 122 0 0 0 254 128 Z" transform="rotate(60 250 250)"/>
+            <path fill="#e46c78" d="M258 30 A220 220 0 0 1 436 133 L353 185 A122 122 0 0 0 254 128 Z" transform="rotate(120 250 250)"/>
+            <path fill="#b9a1ec" d="M258 30 A220 220 0 0 1 436 133 L353 185 A122 122 0 0 0 254 128 Z" transform="rotate(180 250 250)"/>
+            <path fill="#58c8f0" d="M258 30 A220 220 0 0 1 436 133 L353 185 A122 122 0 0 0 254 128 Z" transform="rotate(240 250 250)"/>
+            <path fill="#63d2b3" d="M258 30 A220 220 0 0 1 436 133 L353 185 A122 122 0 0 0 254 128 Z" transform="rotate(300 250 250)"/>
+          </g>
+          <g class="ring-labels" text-anchor="middle" aria-hidden="true">
+            <text x="335" y="94"><tspan class="ring-number">1</tspan><tspan x="335" dy="24">Planowanie</tspan></text>
+            <text x="418" y="232"><tspan class="ring-number">2</tspan><tspan x="418" dy="24">Analiza</tspan><tspan x="418" dy="20">wymagań</tspan></text>
+            <text x="335" y="388"><tspan class="ring-number">3</tspan><tspan x="335" dy="24">Projekt</tspan></text>
+            <text x="165" y="388"><tspan class="ring-number">4</tspan><tspan x="165" dy="24">Implementacja</tspan></text>
+            <text x="82" y="242"><tspan class="ring-number">5</tspan><tspan x="82" dy="24">Testy</tspan></text>
+            <text x="165" y="84"><tspan class="ring-number">6</tspan><tspan x="165" dy="24">Wydanie</tspan><tspan x="165" dy="20">i utrzymanie</tspan></text>
+          </g>
+          <text class="ring-center" x="250" y="213" text-anchor="middle" aria-hidden="true"><tspan x="250">Software</tspan><tspan x="250" dy="29">Development</tspan><tspan x="250" dy="29">Life Cycle</tspan><tspan class="ring-return" x="250" dy="43">↻ feedback</tspan></text>
+        </svg>
+        <div>
+          <p>Potrzeby użytkowników prowadzą do zmian. Wyniki testów, review i obserwacje z eksploatacji wracają do zespołu.</p>
+          <ul>
+            <li>Etapy nie muszą być osobnymi, zamkniętymi fazami.</li>
+            <li>Krótka iteracja może przejść przez cały cykl.</li>
+            <li><strong>CI skraca pętlę informacji zwrotnej</strong> podczas pracy nad zmianą.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="ci-feedback" data-title="CI skraca czas wykrycia błędu" data-section="sdlc">
+    <div class="content">
+      <div class="kicker">Continuous Integration</div>
+      <h2>Mała zmiana. <span class="accent">Szybka odpowiedź.</span></h2>
+      <div class="three">
+        <div class="panel"><h3>Integruj często</h3><p>Krótkie gałęzie i niewielkie zmiany ograniczają liczbę możliwych przyczyn problemu.</p></div>
+        <div class="panel"><h3>Sprawdzaj automatycznie</h3><p>Build i testy uruchamiają się według tych samych reguł dla kolejnych zmian.</p></div>
+        <div class="panel"><h3>Reaguj na wynik</h3><p>Czerwony wynik wymaga diagnozy i poprawki. Sam plik YAML nie tworzy praktyki CI.</p></div>
+      </div>
+      <p>Błąd wykryty po kilku minutach łatwiej połączyć z konkretną zmianą niż problem odkryty po tygodniu.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="ci-a-cd" data-title="Continuous Integration, Delivery i Deployment" data-section="sdlc">
+    <div class="content">
+      <div class="kicker">Trzy procesy // różne efekty</div>
+      <h2>Zielony build <span class="orange">nie jest wdrożeniem</span></h2>
+      <table class="comparison">
+        <thead><tr><th>Proces</th><th>Co robi?</th><th>Efekt</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Continuous Integration (CI)</strong></td><td>Integruje i weryfikuje kod.</td><td>Artefakt builda, wyniki testów i raporty.</td></tr>
+          <tr><td><strong>Continuous Delivery</strong></td><td>Automatyzuje przygotowanie, dostarczenie i konfigurację wydania.</td><td>Wersja gotowa do wdrożenia na żądanie; decyzja o produkcji pozostaje ręczna.</td></tr>
+          <tr><td><strong>Continuous Deployment</strong></td><td>Automatycznie wdraża zmiany, które przeszły wymagane kontrole.</td><td>Nowa wersja dostępna dla użytkownika bez osobnej ręcznej zgody na każdą zmianę.</td></tr>
+        </tbody>
+      </table>
+      <p>Jedna platforma może realizować wszystkie trzy procesy. O tym, co się stało, decydują wykonane kroki, nie nazwa narzędzia.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="rodzaje-testow" data-title="Rodzaje testów i ich granice" data-section="sdlc">
+    <div class="content">
+      <div class="kicker">Co obejmuje sprawdzenie?</div>
+      <h2>Testy mają <span class="accent">różny zakres</span></h2>
+      <div class="three">
+        <div class="panel"><h3>Jednostkowe</h3><p>Mały fragment logiki. Zależności często zastępują duble. Zwykle krótki czas i precyzyjna diagnoza.</p></div>
+        <div class="panel"><h3>Integracyjne</h3><p>Współpraca elementów, np. API i bazy danych. Sprawdzają granice, których nie obejmuje test z mockiem.</p></div>
+        <div class="panel"><h3>End-to-end</h3><p>Scenariusz użytkownika przez cały system, często z przeglądarką. Szerszy sygnał, większy koszt środowiska i diagnozy.</p></div>
+      </div>
+      <p>Lint i analiza statyczna uzupełniają testy. Zielony wynik dowodzi przejścia <strong>skonfigurowanych sprawdzeń</strong>, nie braku wszystkich błędów.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="ci-i-review" data-title="Automatyczne sprawdzenia i code review" data-section="sdlc">
+    <div class="content">
+      <div class="kicker">Wspólna decyzja zespołu</div>
+      <h2>Automat sprawdza. <span class="accent">Człowiek ocenia.</span></h2>
+      <div class="flow flow-line"><div class="node">Zmiana</div><div class="arrow">→</div><div class="node">Pull request</div><div class="arrow">→</div><div class="node">CI + review</div><div class="arrow">→</div><div class="node">Merge</div></div>
+      <div class="two">
+        <p><strong>CI:</strong> czy kod da się zbudować i czy przechodzi ustalone kontrole?</p>
+        <p><strong>Review:</strong> czy zmiana rozwiązuje właściwy problem i czy będzie zrozumiała za miesiąc?</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-git" data-title="Strategie gałęzi" data-section="git" data-section-start data-section-title="Strategie gałęzi">
+    <div class="content">
+      <div class="kicker">02 // Współpraca w Git</div>
+      <h2>Dokąd trafia <span class="accent">zmiana?</span></h2>
+      <p class="lead">Najpierw ustalamy model integracji. Dopiero potem konfigurujemy automatyzację.</p>
+      <div class="section-topics"><span>GitHub Flow</span><span>Merge, squash, fast-forward</span><span>Git Flow</span></div>
+      <p>Gałąź jest nazwanym wskaźnikiem na commit. Nazwy <code>main</code> i <code>develop</code> otrzymują znaczenie od zespołu, nie od samego Gita.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="github-flow" data-title="GitHub Flow — main i krótkie gałęzie" data-section="git">
+    <div class="content">
+      <div class="kicker">Jedna główna linia pracy</div>
+      <h2>GitHub Flow: <span class="accent">main + feature</span></h2>
+      <svg class="git-graph" viewBox="0 0 1000 245" role="img" aria-labelledby="github-flow-title github-flow-desc">
+        <title id="github-flow-title">Krótka gałąź feature jest scalana do main</title>
+        <desc id="github-flow-desc">Czas biegnie w prawo. Feature powstaje z B. F1 i F2 są sprawdzane w PR-ze. Main otrzymuje w tym czasie C, a następnie commit scalenia M z rodzicami C i F2.</desc>
+        <text class="main-text" x="20" y="60">main</text><text class="feature-text" x="20" y="165">feature</text>
+        <path class="main-line" d="M155 55 H950"/><path class="feature-line" d="M320 55 C365 55 360 160 415 160 H680 C755 160 755 55 830 55"/>
+        <g class="main-dot"><circle cx="170" cy="55" r="9"/><circle cx="320" cy="55" r="9"/><circle cx="590" cy="55" r="9"/><circle cx="830" cy="55" r="11"/></g>
+        <g class="feature-dot"><circle cx="450" cy="160" r="9"/><circle cx="650" cy="160" r="9"/></g>
+        <g class="commit-text"><text x="162" y="30">A</text><text x="312" y="30">B</text><text x="582" y="30">C</text><text x="821" y="30">M</text><text x="435" y="198">F1</text><text x="635" y="198">F2</text></g>
+        <text class="caption-text" x="395" y="125">PR → CI + review → poprawki</text><text class="caption-text" x="850" y="225">czas →</text>
+      </svg>
+      <ul>
+        <li>Zmianę zaczynamy z aktualnego <code>main</code>; PR można otworzyć jeszcze jako draft.</li>
+        <li>Kolejne commity aktualizują ten sam PR i jego sprawdzenia.</li>
+        <li>Po akceptacji integrujemy zmianę, usuwamy feature i utrzymujemy main gotowy do wydania.</li>
+      </ul>
+      <p class="source-links"><a href="https://docs.github.com/en/get-started/using-github/github-flow">GitHub Flow</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="merge-a-squash" data-title="Merge commit a squash" data-section="git">
+    <div class="content">
+      <div class="kicker">Ta sama zmiana // inna historia</div>
+      <h2>Merge zachowuje gałąź. <span class="accent">Squash scala zmianę.</span></h2>
+      <div class="two">
+        <div>
+          <h3>Merge commit</h3>
+          <svg class="git-graph" viewBox="0 0 480 200" role="img" aria-labelledby="merge-title merge-desc">
+            <title id="merge-title">Merge commit M ma dwóch rodziców</title><desc id="merge-desc">Main: B, C, M. Feature: B, F1, F2. Rodzicami M są C i F2; F1 i F2 pozostają w historii main.</desc>
+            <path class="main-line" d="M40 45 H450"/><path class="feature-line" d="M80 45 C120 45 110 140 160 140 H280 C335 140 335 45 390 45"/>
+            <g class="main-dot"><circle cx="80" cy="45" r="9"/><circle cx="250" cy="45" r="9"/><circle cx="390" cy="45" r="11"/></g><g class="feature-dot"><circle cx="170" cy="140" r="9"/><circle cx="275" cy="140" r="9"/></g>
+            <g class="commit-text"><text x="73" y="23">B</text><text x="243" y="23">C</text><text x="381" y="23">M</text><text x="155" y="176">F1</text><text x="260" y="176">F2</text></g>
+          </svg>
+          <p>M ma dwóch rodziców. Commity F1 i F2 zachowują tożsamość oraz relację z gałęzią.</p>
+        </div>
+        <div>
+          <h3>Squash and merge</h3>
+          <svg class="git-graph" viewBox="0 0 480 200" role="img" aria-labelledby="squash-title squash-desc">
+            <title id="squash-title">Squash tworzy nowy commit S</title><desc id="squash-desc">Main: B, C, S. S ma jednego rodzica C i zawiera połączoną zmianę F1 oraz F2. Przerywana linia opisuje przeniesienie zmian, a nie krawędź rodzica w Git.</desc>
+            <path class="main-line" d="M40 45 H450"/><path class="feature-line" d="M80 45 C120 45 110 140 160 140 H310"/><path class="transfer-line" d="M300 135 L386 57"/>
+            <g class="main-dot"><circle cx="80" cy="45" r="9"/><circle cx="250" cy="45" r="9"/><circle cx="390" cy="45" r="11"/></g><g class="feature-dot"><circle cx="170" cy="140" r="9"/><circle cx="275" cy="140" r="9"/></g>
+            <g class="commit-text"><text x="73" y="23">B</text><text x="243" y="23">C</text><text x="382" y="23">S</text><text x="155" y="176">F1</text><text x="260" y="176">F2</text></g>
+          </svg>
+          <p>S ma jednego rodzica. Zawiera łączną zmianę PR-a, ale nie włącza F1 i F2 jako przodków main.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="fast-forward" data-title="Fast-forward i ochrona przed rozbieżną historią" data-section="git">
+    <div class="content">
+      <div class="kicker">Bez nowego commita scalenia</div>
+      <h2>Fast-forward <span class="accent">przesuwa wskaźnik</span></h2>
+      <svg class="git-graph" viewBox="0 0 1000 180" role="img" aria-labelledby="ff-title ff-desc">
+        <title id="ff-title">Main przesuwa się z A do C</title><desc id="ff-desc">A, B i C leżą na jednej linii historii. Przed fast-forward main wskazuje A, a feature C. Po operacji main wskazuje istniejący C. Nie powstaje merge commit.</desc>
+        <path class="main-line" d="M180 80 H860"/><g class="main-dot"><circle cx="230" cy="80" r="11"/><circle cx="520" cy="80" r="9"/><circle cx="810" cy="80" r="11"/></g>
+        <g class="commit-text"><text x="220" y="116">A</text><text x="510" y="116">B</text><text x="800" y="116">C</text></g>
+        <text class="main-text" x="140" y="38">main przed</text><text class="feature-text" x="705" y="151">feature</text><text class="main-text" x="705" y="38">main po</text><path class="transfer-line" d="M350 30 H680"/>
+      </svg>
+      <div class="two">
+        <pre><code class="language-bash">git switch main
+git pull --ff-only</code></pre>
+        <p><code>--ff-only</code> odmawia integracji rozbieżnej historii. Chroni np. wtedy, gdy na lokalnym main zostały własne commity, a zdalny main też poszedł naprzód.</p>
+      </div>
+      <p>To kontrola historii commitów, nie sposób zapisywania niezacommitowanych plików. GitHub „Rebase and merge” jest inną operacją niż lokalny fast-forward.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="git-flow-release" data-title="Git Flow — stabilizacja wydania" data-section="git">
+    <div class="content">
+      <div class="kicker">Main + develop + gałęzie wydania</div>
+      <h2>Release oddziela <span class="accent">stabilizację od rozwoju</span></h2>
+      <svg class="git-graph" viewBox="0 0 1000 320" role="img" aria-labelledby="release-title release-desc">
+        <title id="release-title">Feature i release w Git Flow</title><desc id="release-desc">Feature wraca do develop. Z develop wychodzi release, podczas gdy rozwój trwa dalej. Poprawiona wersja z release trafia do main jako v1.1 oraz z powrotem do develop.</desc>
+        <text class="main-text" x="15" y="45">main</text><text class="develop-text" x="15" y="125">develop</text><text class="feature-text" x="15" y="205">feature</text><text class="release-text" x="15" y="285">release</text>
+        <path class="main-line" d="M160 40 H960"/><path class="develop-line" d="M160 120 H960"/><path class="feature-line" d="M220 120 C255 120 250 200 290 200 H370 C420 200 420 120 470 120"/><path class="release-line" d="M520 120 C560 120 550 280 600 280 H740 C800 280 800 40 860 40"/><path class="release-line return-line" d="M740 280 C825 280 825 120 910 120"/>
+        <g class="main-dot"><circle cx="190" cy="40" r="9"/><circle cx="860" cy="40" r="11"/></g><g class="develop-dot"><circle cx="220" cy="120" r="9"/><circle cx="470" cy="120" r="9"/><circle cx="520" cy="120" r="9"/><circle cx="700" cy="120" r="9"/><circle cx="910" cy="120" r="9"/></g><g class="feature-dot"><circle cx="300" cy="200" r="9"/><circle cx="365" cy="200" r="9"/></g><g class="release-dot"><circle cx="640" cy="280" r="9"/><circle cx="735" cy="280" r="9"/></g>
+        <text class="caption-text" x="817" y="19">v1.1</text><text class="caption-text" x="570" y="93">rozwój kolejnej wersji</text><text class="caption-text" x="574" y="314">stabilizacja wydania</text>
+      </svg>
+      <p><strong>Feature:</strong> develop → feature → develop. <strong>Release:</strong> develop → release → main i develop, żeby poprawki nie zginęły.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="git-flow-hotfix" data-title="Git Flow — pilna poprawka wydania" data-section="git">
+    <div class="content">
+      <div class="kicker">Naprawa poza bieżącym rozwojem</div>
+      <h2>Hotfix wraca <span class="accent">do obu linii</span></h2>
+      <svg class="git-graph" viewBox="0 0 1000 270" role="img" aria-labelledby="hotfix-title hotfix-desc">
+        <title id="hotfix-title">Hotfix v1.1.1</title><desc id="hotfix-desc">Hotfix wychodzi z v1.1 na main. Poprawka trafia do main jako v1.1.1 oraz do develop. Diagram zakłada brak aktywnej gałęzi release.</desc>
+        <text class="main-text" x="15" y="45">main</text><text class="release-text" x="15" y="140">hotfix</text><text class="develop-text" x="15" y="235">develop</text>
+        <path class="main-line" d="M160 40 H950"/><path class="develop-line" d="M160 230 H950"/><path class="release-line" d="M280 40 C330 40 330 135 380 135 H530 C590 135 590 40 650 40"/><path class="release-line return-line" d="M530 135 C670 135 670 230 810 230"/>
+        <g class="main-dot"><circle cx="280" cy="40" r="9"/><circle cx="650" cy="40" r="11"/></g><g class="release-dot"><circle cx="420" cy="135" r="9"/><circle cx="530" cy="135" r="9"/></g><g class="develop-dot"><circle cx="250" cy="230" r="9"/><circle cx="490" cy="230" r="9"/><circle cx="810" cy="230" r="9"/></g>
+        <text class="caption-text" x="246" y="18">v1.1</text><text class="caption-text" x="615" y="18">v1.1.1</text><text class="caption-text" x="390" y="107">pilna poprawka</text>
+      </svg>
+      <p>Nie trzeba wydawać całego niestabilnego develop, aby poprawić błąd produkcyjny.</p>
+      <p>Przy aktywnej gałęzi release hotfix przenosimy także do niej; późniejsze scalenie release zasili develop.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="wybor-strategii" data-title="GitHub Flow czy Git Flow" data-section="git">
+    <div class="content">
+      <div class="kicker">Proces powinien pasować do sposobu wydawania</div>
+      <h2>Więcej gałęzi ≠ <span class="accent">lepsza integracja</span></h2>
+      <div class="two">
+        <div class="panel"><h3>GitHub Flow</h3><p>Main i krótkie feature branches. Pasuje do częstej integracji niewielkich zmian.</p><p>Checks i review chronią powrót zmiany do main.</p></div>
+        <div class="panel"><h3>Git Flow</h3><p>Osobne linie rozwoju i stabilizacji. Może pasować do wersjonowanych wydań przygotowywanych przez dłuższy czas.</p><p>Checks muszą chronić również właściwe gałęzie develop i release.</p></div>
+      </div>
+      <p>Autor Git Flow sam zaleca prostszy model dla oprogramowania dostarczanego ciągle.</p>
+      <p class="source-links"><a href="https://nvie.com/posts/a-successful-git-branching-model/">Vincent Driessen — Git Flow i refleksja autora z 2020 r.</a></p>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-platformy" data-title="Platformy CI" data-section="platformy" data-section-start data-section-title="Platformy CI">
+    <div class="content">
+      <div class="kicker">03 // Narzędzia</div>
+      <h2>Proces CI i <span class="accent">miejsce wykonania</span></h2>
+      <p class="lead">Platforma organizuje pracę. Runner ją wykonuje. To nie musi być ta sama usługa.</p>
+      <div class="section-topics"><span>Platformy</span><span>Integracje</span><span>Infrastruktura buildów</span></div>
+    </div>
+  </section>
+
+  <section class="slide" id="systemy-ci" data-title="Sześć platform automatyzacji" data-section="platformy">
+    <div class="content">
+      <div class="kicker">Te same potrzeby // różne ekosystemy</div>
+      <h2>Nie tylko <span class="accent">GitHub Actions</span></h2>
+      <table class="comparison">
+        <thead><tr><th>Platforma</th><th>Gdzie pasuje?</th><th>Co warto uwzględnić?</th></tr></thead>
+        <tbody>
+          <tr><td>GitHub Actions</td><td>Workflow obok repozytorium i PR-ów GitHuba.</td><td>Actions, runnery i polityki organizacji.</td></tr>
+          <tr><td>GitLab CI/CD</td><td>Pipeline i merge request w GitLab.</td><td>Wariant chmurowy lub własna instalacja.</td></tr>
+          <tr><td>Jenkins</td><td>Serwer automatyzacji z agentami i wtyczkami.</td><td>Elastyczność oraz koszt utrzymania.</td></tr>
+          <tr><td>Azure Pipelines</td><td>Azure DevOps, także z repozytoriami GitHub.</td><td>Agenci, połączenia i uprawnienia.</td></tr>
+          <tr><td>CircleCI</td><td>Zewnętrzna platforma połączona z repozytorium.</td><td>Własny pipeline i wynik odsyłany do PR-a.</td></tr>
+          <tr><td>TeamCity</td><td>Automatyzacja JetBrains: Cloud lub On-Premises.</td><td>Konfiguracje buildów i zarządzanie agentami.</td></tr>
+        </tbody>
+      </table>
+      <p class="source-links"><a href="https://docs.github.com/en/actions">GitHub</a> · <a href="https://docs.gitlab.com/ci/">GitLab</a> · <a href="https://www.jenkins.io/doc/">Jenkins</a> · <a href="https://learn.microsoft.com/en-us/azure/devops/pipelines/">Azure</a> · <a href="https://circleci.com/docs/">CircleCI</a> · <a href="https://www.jetbrains.com/help/teamcity/teamcity-documentation.html">TeamCity</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="infrastruktura-ci" data-title="Blacksmith i Depot — infrastruktura wykonania" data-section="platformy">
+    <div class="content">
+      <div class="kicker">Nie każda usługa CI zastępuje orkiestrator</div>
+      <h2>Kto planuje? <span class="accent">Kto wykonuje?</span></h2>
+      <div class="flow flow-line"><div class="node">GitHub Actions<br><small>zdarzenie + graf jobs</small></div><div class="arrow">→</div><div class="node">Runner<br><small>maszyna wykonawcza</small></div><div class="arrow">→</div><div class="node">Build / test / wynik</div></div>
+      <div class="two">
+        <div class="panel"><h3>Blacksmith</h3><p>Zarządzana infrastruktura runnerów dla GitHub Actions. Workflow może pozostać w GitHubie, a job działa na runnerze dostawcy.</p></div>
+        <div class="panel"><h3>Depot</h3><p>Zarządzane runnery GitHub Actions oraz zdalna infrastruktura budowania, m.in. obrazów kontenerowych z BuildKit.</p></div>
+      </div>
+      <p>Porównujemy zgodność środowiska, cache, sieć, koszt i granice zaufania — nie tylko czas jednego builda.</p>
+      <p>Standardowe runnery GitHub-hosted są bezpłatne dla publicznych repozytoriów. Limity prywatnych zależą od planu; większe runnery są płatne także publicznie.</p>
+      <p class="source-links"><a href="https://docs.blacksmith.sh/">Blacksmith — dokumentacja</a> · <a href="https://depot.dev/docs">Depot — dokumentacja</a> · <a href="https://docs.github.com/en/billing/concepts/product-billing/github-actions">Rozliczanie GitHub Actions</a></p>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-yaml" data-title="YAML i pierwszy workflow" data-section="yaml" data-section-start data-section-title="YAML i pierwszy workflow">
+    <div class="content">
+      <div class="kicker">04 // Pierwsze uruchomienie</div>
+      <h2>Od kilku kluczy do <span class="accent">działającego workflow</span></h2>
+      <p class="lead">YAML opisuje strukturę. Schemat GitHub Actions nadaje tej strukturze znaczenie.</p>
+      <div class="section-topics"><span>Mapy i listy</span><span>Hello CI</span><span>Edytor i walidacja</span></div>
+    </div>
+  </section>
+
+  <section class="slide" id="yaml-minimum" data-title="YAML — mapa, lista i wartość" data-section="yaml">
+    <div class="content">
+      <div class="kicker">Fragment struktury workflow</div>
+      <h2>Mapa ma klucze. <span class="accent">Lista ma elementy.</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">jobs:
+  hello:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "Cześć"
+      - run: pwd</code></pre>
+        <ul>
+          <li><code>klucz: wartość</code> tworzy wpis w mapie.</li>
+          <li><code>hello</code> jest kluczem mapy <code>jobs</code>.</li>
+          <li><code>-</code> rozpoczyna element listy <code>steps</code>.</li>
+          <li>Wcięcia ze spacji pokazują zagnieżdżenie.</li>
+        </ul>
+      </div>
+      <p>Workflow zapisujemy w repozytorium jako plik <code>.github/workflows/hello.yml</code> lub <code>.yaml</code>.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="hello-ci" data-title="Pierwszy kompletny workflow" data-section="yaml">
+    <div class="content">
+      <div class="kicker">Cały plik .github/workflows/hello.yml</div>
+      <h2>Pierwszy workflow: <span class="accent">Hello CI</span></h2>
+      <div class="code-and-notes">
+        <pre><code class="language-yaml" data-embedded="github-actions" data-workflow="hello">name: Hello CI
+on: push
+permissions: {}
+jobs:
+  hello:
+    name: Powitanie
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Wiadomość
+        shell: bash
+        run: echo "CI działa!"
+      - name: System
+        shell: bash
+        run: uname -s</code></pre>
+        <div>
+          <p>Po wysłaniu pliku do GitHuba zdarzenie <code>push</code> uruchomi jedno zadanie z dwoma krokami.</p>
+          <p>Nie potrzebujemy repozytorium na dysku runnera ani uprawnień do API. Wykonujemy tylko polecenia powłoki.</p>
+          <p>System wybraliśmy jawnie: <code>ubuntu-24.04</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="pierwszy-run" data-title="Hello CI w zakładce Actions" data-section="yaml">
+    <div class="content">
+      <div class="kicker">Plik → zdarzenie → wykonanie</div>
+      <h2>Powiąż wynik <span class="accent">z commitem</span></h2>
+      <ol>
+        <li>Na liście Actions znajdź <strong>Hello CI</strong>.</li>
+        <li>W run sprawdź zdarzenie <strong>push</strong>, gałąź i SHA.</li>
+        <li>Graf zawiera job <strong>Powitanie</strong>.</li>
+        <li>W logu kroku <strong>Wiadomość</strong> odczytaj <code>CI działa!</code>.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-hello-run" data-title="Hello CI — podsumowanie uruchomienia" data-section="yaml">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Hello CI: <span class="accent">wynik dla commita</span></h2>
+      <figure class="screenshot" data-screenshot="hello-run" data-screenshot-source="browser" data-screenshot-caption="Hello CI: zdarzenie push, gałąź, SHA i graf z jobem Powitanie.">
+        <a class="screenshot-link" href="screenshots/hello-run.png" target="_blank" rel="noopener" aria-label="Otwórz zrzut Hello CI w pełnym rozmiarze">
+          <img src="screenshots/hello-run.png" alt="Podsumowanie uruchomienia Hello CI w GitHub Actions: push, gałąź, SHA i job Powitanie." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Zdarzenie, rewizja i wynik joba w jednym podsumowaniu.</span><a href="screenshots/hello-run.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="setup-job" data-title="Set up job — środowisko i logi" data-section="yaml">
+    <div class="content">
+      <div class="kicker">Co dodaje runner?</div>
+      <h2>Nie każdy krok logu <span class="accent">pochodzi z YAML</span></h2>
+      <div class="two">
+        <div class="panel"><h3>Set up job</h3><p>Przygotowanie środowiska: obraz systemu, runner i efektywne uprawnienia tokena.</p></div>
+        <div class="panel"><h3>Wiadomość → System</h3><p>Nasze kroki, w kolejności z pliku. <code>uname -s</code> pokaże system runnera, nie laptopa autora.</p></div>
+      </div>
+      <p>Po pracy mogą pojawić się także kroki sprzątania. Nazwa kroku ułatwia połączenie logu z definicją.</p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-hello-setup" data-title="Hello CI — środowisko runnera" data-section="yaml">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Runner: <span class="accent">Set up job</span></h2>
+      <figure class="screenshot" data-screenshot="hello-setup" data-screenshot-source="browser" data-screenshot-caption="Job Powitanie: rozwinięte Set up job z obrazem runnera i uprawnieniami oraz kroki Wiadomość i System.">
+        <a class="screenshot-link" href="screenshots/hello-setup.png" target="_blank" rel="noopener" aria-label="Otwórz log przygotowania runnera w pełnym rozmiarze">
+          <img src="screenshots/hello-setup.png" alt="Log joba Powitanie z rozwiniętym Set up job, informacją o obrazie runnera i uprawnieniach tokena." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Przygotowanie środowiska jest osobnym krokiem, przed poleceniami z YAML.</span><a href="screenshots/hello-setup.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="yaml-wciecia" data-title="YAML — dwa poprawne sposoby wcięcia listy" data-section="yaml">
+    <div class="content">
+      <div class="kicker">Oba fragmenty oznaczają tę samą strukturę</div>
+      <h2>Lista nie zawsze wymaga <span class="accent">dodatkowego wcięcia</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions" data-yaml-equivalent="steps">steps:
+  - name: Wiadomość
+    run: echo "Cześć"
+  - name: Katalog
+    run: pwd</code></pre>
+        <pre><code class="language-yaml" data-embedded="github-actions" data-yaml-equivalent="steps">steps:
+- name: Wiadomość
+  run: echo "Cześć"
+- name: Katalog
+  run: pwd</code></pre>
+      </div>
+      <ul>
+        <li>YAML dopuszcza niewciętą sekwencję blokową jako wartość klucza mapy.</li>
+        <li><code>name</code> i <code>run</code> nadal muszą należeć do tego samego elementu.</li>
+        <li>Wybierz jedną konwencję. Nie zastępuj spacji tabulatorami.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide" id="yaml-on-push" data-title="Dlaczego on: push jest poprawne" data-section="yaml">
+    <div class="content">
+      <div class="kicker">Składnia YAML ≠ schemat Actions</div>
+      <h2><code>on: push</code> to <span class="accent">skalar zaakceptowany przez Actions</span></h2>
+      <div class="three">
+        <div><h3>Skalar</h3><pre><code class="language-yaml" data-embedded="github-actions">on: push</code></pre></div>
+        <div><h3>Lista</h3><pre><code class="language-yaml" data-embedded="github-actions">on:
+  - push
+  - pull_request</code></pre></div>
+        <div><h3>Mapa z konfiguracją</h3><pre><code class="language-yaml" data-embedded="github-actions">on:
+  push:
+    branches: [main]</code></pre></div>
+      </div>
+      <p><strong>YAML</strong> pozwala przypisać kluczowi tekst, listę lub mapę. <strong>Schemat GitHub Actions</strong> dopuszcza te postacie właśnie dla <code>on</code>.</p>
+      <p>To nie znaczy, że dowolny klucz workflow przyjmuje dowolny typ wartości.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#on">Workflow syntax — on</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="yaml-cytowanie" data-title="YAML — tekst, cudzysłowy i komentarze" data-section="yaml">
+    <div class="content">
+      <div class="kicker">Kiedy cytować wartość?</div>
+      <h2>Cudzysłów chroni <span class="accent">znaczenie tekstu</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">name: "Build: API #1"
+env:
+  FLAG: "false"
+  NOTICE: "! to jest tekst"
+  LABEL: 'Raport #1'
+
+# Komentarz, nie wartość
+permissions: {contents: read}</code></pre>
+        <ul>
+          <li><code>false</code> jest wartością logiczną, a <code>"false"</code> tekstem.</li>
+          <li><code>:</code> ze spacją może wprowadzić kolejny wpis mapy.</li>
+          <li><code>#</code> rozpoczyna komentarz, gdy stoi poza cytowanym skalarem w miejscu komentarza, np. po spacji.</li>
+          <li><code>"Raport #1"</code> zachowuje znak <code>#</code> jako część tekstu.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="yaml-multiline" data-title="YAML — tekst wieloliniowy" data-section="yaml">
+    <div class="content">
+      <div class="kicker">Dwie reprezentacje tekstu</div>
+      <h2><code>|</code> zachowuje linie. <span class="accent"><code>&gt;-</code> je składa.</span></h2>
+      <div class="two">
+        <div><h3>Skrypt z kilkoma poleceniami</h3><pre><code class="language-yaml" data-embedded="github-actions">- shell: bash
+  run: |
+    echo "Początek"
+    pwd
+    uname -s</code></pre></div>
+        <div><h3>Jedno polecenie</h3><pre><code class="language-yaml" data-embedded="github-actions">- run: &gt;-
+    printf '%s\n'
+    'Jeden argument tekstowy'</code></pre></div>
+      </div>
+      <p><code>&gt;</code> zwykle składa kolejne linie w spacje; znak <code>-</code> usuwa końcowy znak nowej linii. Puste i dodatkowo wcięte linie mają osobne reguły.</p>
+      <p>Wewnątrz <code>run: |</code> znajduje się tekst skryptu. Jego komentarze i cudzysłowy interpretuje już powłoka.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="yaml-json" data-title="YAML i JSON opisują te same rodzaje struktur" data-section="yaml">
+    <div class="content">
+      <div class="kicker">Mapy, listy, skalary</div>
+      <h2>JSON mieści się <span class="accent">w YAML</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">on: [push, workflow_dispatch]
+permissions:
+  contents: read</code></pre>
+        <pre><code class="language-json">{
+  "on": ["push", "workflow_dispatch"],
+  "permissions": {"contents": "read"}
+}</code></pre>
+      </div>
+      <p>YAML 1.2 jest nadzbiorem JSON. Wartość można zapisać w stylu JSON; da się tak zapisać również cały workflow.</p>
+      <p>Plik nadal umieszczamy w <code>.github/workflows/</code> z rozszerzeniem <code>.yml</code> lub <code>.yaml</code>, nie <code>.json</code>.</p>
+      <p class="source-links"><a href="https://yaml.org/spec/1.2.2/">Specyfikacja YAML 1.2.2</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="ide-kolorowanie" data-title="YAML i osadzone języki w edytorze" data-section="yaml">
+    <div class="content">
+      <div class="kicker">Jeden plik // kilka interpreterów</div>
+      <h2>W <code>run</code> i <code>script</code> jest <span class="accent">kolejny język</span></h2>
+      <div class="two">
+        <div><h3>Tylko YAML</h3><pre><code class="language-yaml" data-embedded="none">- shell: bash
+  run: echo "$GITHUB_SHA"
+- uses: actions/github-script@v9
+  with: {script: "core.notice('CI');"}
+- if: ${{ github.ref == 'refs/heads/main' }}
+  shell: bash
+  run: echo main</code></pre></div>
+        <div><h3>YAML + osadzone języki</h3><pre><code class="language-yaml" data-embedded="github-actions">- shell: bash
+  run: echo "$GITHUB_SHA"
+- uses: actions/github-script@v9
+  with: {script: "core.notice('CI');"}
+- if: ${{ github.ref == 'refs/heads/main' }}
+  shell: bash
+  run: echo main</code></pre></div>
+      </div>
+      <p>Tekst jest identyczny. Po prawej mechanizm strony koloruje jawny Bash, github-script i expressions podczas budowania HTML. To nie jest symulacja interfejsu IDE.</p>
+      <p class="capture" data-screenshot="ide-injections" data-screenshot-source="manual-ide" data-screenshot-caption="Ten sam krótki workflow w IDE: YAML-only obok aktywnego kolorowania Bash, github-script i GitHub expressions. Pokaż rzeczywisty efekt language injection, nie ręcznie kolorowany tekst.">Ręczny kadr z IDE do uzupełnienia: ten sam fragment z rozpoznawaniem osadzonych języków. Zrzut przeglądarki nie zastępuje tego widoku.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="narzedzia-yaml" data-title="IDE, actionlint i yq" data-section="yaml">
+    <div class="content">
+      <div class="kicker">Różne narzędzia sprawdzają różne warstwy</div>
+      <h2>Podpowiedź, <span class="accent">walidacja, inspekcja</span></h2>
+      <div class="two">
+        <div>
+          <h3>JetBrains / VS Code</h3>
+          <p>Schemat workflow, podpowiedzi inputów <code>with</code> i nawigacja do metadata action.</p>
+          <pre><code class="language-yaml" data-embedded="github-actions"># language=githubexpressionlanguage
+if: >-
+  ${{ github.ref == 'refs/heads/main' }}</code></pre>
+          <p class="small">Komentarz jest wskazówką language injection dla odpowiednio skonfigurowanego IDE JetBrains; nie zmienia wykonania w GitHubie.</p>
+        </div>
+        <div>
+          <h3>CLI</h3>
+          <pre><code class="language-bash">actionlint
+yq '.jobs.hello.steps' \
+  .github/workflows/hello.yml</code></pre>
+          <p><strong>actionlint:</strong> błędy specyficzne dla Actions.<br><strong>yq:</strong> odczyt struktury YAML, nie pełna walidacja workflow.</p>
+        </div>
+      </div>
+      <p class="capture" data-screenshot="ide-autocomplete" data-screenshot-source="manual-ide" data-screenshot-caption="Uzupełnianie with dla actions/setup-dotnet: widoczny input global-json-file i jego opis; bez danych prywatnego repozytorium.">Ręczny kadr z IDE do uzupełnienia: podpowiedź inputów action wraz z opisem. Zrzut przeglądarki nie zastępuje tego widoku.</p>
+      <p class="source-links"><a href="https://github.com/rhysd/actionlint">actionlint</a> · <a href="https://mikefarah.gitbook.io/yq">yq</a></p>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-wykonanie" data-title="Model wykonania Actions" data-section="wykonanie" data-section-start data-section-title="Model wykonania">
+    <div class="content">
+      <div class="kicker">05 // Anatomia wykonania</div>
+      <h2>Co uruchomiliśmy <span class="accent">w Hello CI?</span></h2>
+      <p class="lead">Oddziel definicję procesu, konkretne wykonanie i środowisko, w którym działa kod.</p>
+      <div class="section-topics"><span>Workflow i run</span><span>Job i runner</span><span>Step i action</span></div>
+    </div>
+  </section>
+
+  <section class="slide" id="model-wykonania" data-title="Workflow, run, job, runner i step" data-section="wykonanie">
+    <div class="content">
+      <div class="kicker">Definicja ≠ wykonanie</div>
+      <h2>Workflow opisuje. <span class="accent">Run jest zdarzeniem w historii.</span></h2>
+      <div class="flow flow-line"><div class="node">Workflow<br><small>plik YAML</small></div><div class="arrow">→</div><div class="node">Run<br><small>jedno uruchomienie</small></div><div class="arrow">→</div><div class="node">Jobs<br><small>zadania na runnerach</small></div><div class="arrow">→</div><div class="node">Steps<br><small>kolejne czynności</small></div></div>
+      <ul>
+        <li><strong>Runner</strong> to środowisko wykonujące job.</li>
+        <li><strong>Step</strong> uruchamia polecenie <code>run</code> albo komponent <code>uses</code>.</li>
+        <li><strong>Action</strong> to komponent wywołany w kroku, nie dodatkowy poziom między jobem a runnerem.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide" id="nazwy-i-id" data-title="Nazwy dla ludzi, identyfikatory dla odwołań" data-section="wykonanie">
+    <div class="content">
+      <div class="kicker">Nie każde id jest polem id w YAML</div>
+      <h2><code>name</code> to etykieta. <span class="accent"><code>id</code> to identyfikator.</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">name: Kontrola projektu
+run-name: Sprawdzenie zmiany
+jobs:
+  verify:
+    name: Build i testy
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Wersja systemu
+        id: system
+        run: uname -s</code></pre>
+        <ul>
+          <li><code>name</code> workflow jest widoczne na liście Actions.</li>
+          <li><code>run-name</code> opisuje konkretne uruchomienie.</li>
+          <li><code>verify</code> jest identyfikatorem joba — kluczem mapy.</li>
+          <li><code>system</code> jest opcjonalnym id kroku.</li>
+          <li>GitHub nadaje też własne identyfikatory workflow i runs używane w API.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="kolejnosc-krokow" data-title="Kroki kolejno, niezależne jobs równolegle" data-section="wykonanie">
+    <div class="content">
+      <div class="kicker">Kolejność w pliku nie jest zależnością jobs</div>
+      <h2>Kroki kolejno. <span class="accent">Jobs mogą równolegle.</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "Krok 1"
+      - run: echo "Krok 2"
+  docs:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "Osobny job"</code></pre>
+        <div>
+          <p>W <code>lint</code> drugi krok czeka na pierwszy. Oba korzystają z workspace tego samego joba.</p>
+          <p><code>lint</code> i <code>docs</code> mogą działać jednocześnie, jeśli dostępne są runnery.</p>
+          <p>Standardowe joby GitHub-hosted mają osobne środowiska. Plik utworzony w jednym nie pojawia się automatycznie w drugim.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="podstawowe-needs" data-title="Needs definiuje zależność między jobs" data-section="wykonanie">
+    <div class="content">
+      <div class="kicker">Jawna krawędź grafu</div>
+      <h2><code>needs</code> mówi: <span class="accent">najpierw to zadanie</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "Budowanie"
+  verify:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "Weryfikacja"</code></pre>
+        <div>
+          <div class="flow flow-line"><div class="node">build</div><div class="arrow">→</div><div class="node">verify</div></div>
+          <p><code>verify</code> domyślnie ruszy dopiero po sukcesie <code>build</code>.</p>
+          <p>Lista <code>needs: [build, lint]</code> oznacza oczekiwanie na obie zależności.</p>
+          <p>Zależność ustala kolejność, ale nie kopiuje plików.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-jobs-needs-graph" data-title="Needs — graf wykonania" data-section="wykonanie">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Graf: <span class="accent">równoległość i zależność</span></h2>
+      <figure class="screenshot" data-screenshot="jobs-needs-graph" data-screenshot-source="browser" data-screenshot-caption="Graf uruchomienia: dwa niezależne jobs oraz job zależny przez needs, z nazwami i statusami.">
+        <a class="screenshot-link" href="screenshots/jobs-needs-graph.png" target="_blank" rel="noopener" aria-label="Otwórz graf zależności jobs w pełnym rozmiarze">
+          <img src="screenshots/jobs-needs-graph.png" alt="Graf GitHub Actions z dwoma niezależnymi zadaniami i zadaniem połączonym zależnością needs." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Strzałka oznacza zależność; niezależne jobs mogą wykonywać się równolegle.</span><a href="screenshots/jobs-needs-graph.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="run-uses-with" data-title="Run wykonuje skrypt, uses wywołuje action" data-section="wykonanie">
+    <div class="content">
+      <div class="kicker">Dwie postacie kroku</div>
+      <h2>Polecenie albo <span class="accent">gotowy komponent</span></h2>
+      <div class="two">
+        <div><h3>run</h3><pre><code class="language-yaml" data-embedded="github-actions">- name: Pokaż narzędzie
+  shell: bash
+  run: dotnet --info</code></pre><p>Uruchamia skrypt w wybranej powłoce. Można ustawić <code>working-directory</code>.</p></div>
+        <div><h3>uses + with</h3><pre><code class="language-yaml" data-embedded="github-actions">- name: Przygotuj .NET
+  uses: actions/setup-dotnet@v6
+  with:
+    dotnet-version: '10.x'</code></pre><p><code>with</code> przekazuje inputy opisane przez autora action. Ich nazwy sprawdzamy w dokumentacji lub <code>action.yml</code>.</p></div>
+      </div>
+      <p>Nie łączymy <code>run</code> i <code>uses</code> w jednym kroku. Komenda <code>node skrypt.js</code> nadal jest krokiem run, a nie automatycznie JavaScript action.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="wybor-runnera" data-title="Runs-on wybiera system runnera" data-section="wykonanie">
+    <div class="content">
+      <div class="kicker">Środowisko nie wynika z systemu autora</div>
+      <h2>System wybiera <span class="accent"><code>runs-on</code></span></h2>
+      <table class="comparison">
+        <thead><tr><th>Przykład</th><th>Środowisko</th><th>Typowa powłoka</th></tr></thead>
+        <tbody>
+          <tr><td><code>ubuntu-24.04</code></td><td>GitHub-hosted Linux</td><td>Bash</td></tr>
+          <tr><td><code>windows-latest</code></td><td>GitHub-hosted Windows</td><td>PowerShell</td></tr>
+          <tr><td><code>macos-latest</code></td><td>GitHub-hosted macOS</td><td>Bash</td></tr>
+          <tr><td><code>[self-hosted, linux, x64]</code></td><td>Runner z pasującymi etykietami</td><td>Zależna od konfiguracji</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Actions nie działa zawsze na Linuksie ani na Twoim laptopie.</strong> W tych przykładach wybieramy Ubuntu, żeby pokazywać jedną spójną składnię Bash.</p>
+      <p>Lista etykiet wymaga ich jednoczesnego dopasowania; nie oznacza kilku systemów do uruchomienia.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="checkout-i-setup" data-title="Checkout pobiera kod, setup przygotowuje narzędzie" data-section="wykonanie">
+    <div class="content">
+      <div class="kicker">Dwie osobne odpowiedzialności</div>
+      <h2>Kod i narzędzia <span class="accent">przygotowujemy osobno</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">steps:
+  - uses: actions/checkout@v7
+  - uses: actions/setup-node@v7
+    with:
+      node-version: '24'
+      package-manager-cache: false
+  - run: node --version</code></pre>
+        <ul>
+          <li><strong>Checkout</strong> pobiera kod do <code>GITHUB_WORKSPACE</code>.</li>
+          <li><strong>Setup</strong> udostępnia wybraną wersję narzędzia i ustawia środowisko.</li>
+          <li>Setup Node nie instaluje automatycznie zależności aplikacji.</li>
+          <li>Do samego <code>echo</code> albo odczytu API checkout nie jest potrzebny.</li>
+        </ul>
+      </div>
+      <p>Numer przy nazwie action określa jej wersję. Wersja instalowanego Node jest osobnym inputem.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="typy-actions" data-title="JavaScript, Docker i composite action" data-section="wykonanie">
+    <div class="content">
+      <div class="kicker">Fragmenty trzech różnych plików action.yml</div>
+      <h2>Typ action zapisuje <span class="accent">jej autor</span></h2>
+      <div class="three">
+        <div class="panel"><h3>JavaScript</h3><pre><code class="language-yaml" data-embedded="github-actions">runs:
+  using: node24
+  main: dist/index.js</code></pre><p>Zapakowany kod JS uruchamiany przez runnera.</p></div>
+        <div class="panel"><h3>Docker</h3><pre><code class="language-yaml" data-embedded="github-actions">runs:
+  using: docker
+  image: Dockerfile</code></pre><p>Kod i narzędzia w obrazie. Wymaga runnera Linux z Dockerem.</p></div>
+        <div class="panel"><h3>Composite</h3><pre><code class="language-yaml" data-embedded="github-actions">runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: echo "CI"</code></pre><p>Zestaw kroków w istniejącym jobie.</p></div>
+      </div>
+      <p>Wszystkie wywołujemy przez step z <code>uses</code>. Action nie wybiera własnego <code>runs-on</code>. Runtime JS action jest niezależny od Node instalowanego dla aplikacji.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax#runs">Metadata syntax — runs</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="job-container-services" data-title="Kontener joba a kontener usługi" data-section="wykonanie">
+    <div class="content">
+      <div class="kicker">Dwa różne zastosowania kontenerów</div>
+      <h2>Gdzie działa skrypt? <span class="accent">Gdzie działa baza?</span></h2>
+      <div class="two">
+        <div><h3>container — środowisko joba</h3><pre><code class="language-yaml" data-embedded="github-actions">runs-on: ubuntu-24.04
+container: node:24-bookworm
+steps:
+  - run: node --version</code></pre><p>Kroki run wykonują się wewnątrz kontenera joba. Domyślną powłoką jest tu <code>sh</code>, nie Bash.</p></div>
+        <div><h3>services — proces obok joba</h3><pre><code class="language-yaml" data-embedded="github-actions">runs-on: ubuntu-24.04
+services:
+  postgres:
+    image: postgres:17
+    env:
+      POSTGRES_PASSWORD: ci-only
+    ports: ['5432:5432']</code></pre><p>Skrypt działa na runnerze, baza w osobnym kontenerze. Tutaj łączy się przez <code>localhost:5432</code>.</p></div>
+      </div>
+      <p>Gdy sam job działa w kontenerze, usługę osiąga po nazwie <code>postgres:5432</code>. Przed testami trzeba zaczekać na gotowość bazy, np. przez healthcheck.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="docker-action" data-title="Docker action jest pojedynczym krokiem" data-section="wykonanie">
+    <div class="content">
+      <div class="kicker">Kontener implementacji action</div>
+      <h2>Docker action <span class="accent">nie zamienia całego joba w kontener</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions"># Fragment steps w jobie na runnerze Linux
+- run: uname -s
+- uses: docker://alpine:3.22
+  with:
+    entrypoint: /bin/sh
+    args: -c "uname -s"
+- run: echo "Znowu krok na runnerze"</code></pre>
+      <ul>
+        <li>Kontener dostarcza implementację tego jednego kroku.</li>
+        <li>To nie <code>jobs.&lt;id&gt;.container</code> ani długotrwała usługa z <code>services</code>.</li>
+        <li>GameCI <code>unity-builder@v4</code> uruchamia kontenery, ale ma <code>runs.using: node20</code>. To <strong>JavaScript action</strong>, nie Docker action.</li>
+      </ul>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsuses">Actions z obrazów Docker</a> · <a href="https://github.com/game-ci/unity-builder/blob/v4/action.yml">GameCI v4 — metadata</a> · <a href="https://github.com/actions/hello-world-docker-action/blob/main/action.yml">Metadata prawdziwej Docker action</a></p>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-zdarzenia" data-title="Zdarzenia i rewizje kodu" data-section="zdarzenia" data-section-start data-section-title="Zdarzenia i rewizje">
+    <div class="content">
+      <div class="kicker">06 // Kiedy i dla jakiego kodu?</div>
+      <h2>Trigger wybiera <span class="accent">więcej niż moment startu</span></h2>
+      <p class="lead">Zdarzenie określa kontekst, sprawdzaną rewizję i granicę zaufania.</p>
+      <div class="section-topics"><span>Push i PR</span><span>Schedule i dispatch</span><span>Ref, SHA i merge ref</span></div>
+    </div>
+  </section>
+
+  <section class="slide" id="push-i-pr" data-title="Push i pull_request — filtry gałęzi" data-section="zdarzenia">
+    <div class="content">
+      <div class="kicker">Przykład dla main i krótkich feature branches</div>
+      <h2>PR przed integracją. <span class="accent">Push po integracji.</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]</code></pre>
+        <ul>
+          <li><code>push</code> sprawdza commit wysłany do main, także po merge.</li>
+          <li><code>pull_request</code> domyślnie reaguje na otwarcie, ponowne otwarcie i synchronizację PR-a.</li>
+          <li>Filtr <code>pull_request.branches</code> dotyczy <strong>gałęzi docelowej</strong>, nie gałęzi autora.</li>
+        </ul>
+      </div>
+      <p>W Git Flow trzeba uwzględnić również PR-y do develop lub release. Push na każdą gałąź obok triggera PR może tworzyć dwa runs dla jednej zmiany.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="pull-request-target" data-title="Pull request target — uprzywilejowany kontekst" data-section="zdarzenia">
+    <div class="content">
+      <div class="kicker">Podobna nazwa // inna granica zaufania</div>
+      <h2><span class="danger">Uwaga: pull_request_target</span></h2>
+      <div class="two">
+        <div class="panel"><h3>pull_request</h3><p>Do budowania i testowania proponowanej zmiany. Fork PR ma domyślnie ograniczony token i nie otrzymuje sekretów repozytorium.</p></div>
+        <div class="panel"><h3 class="danger">pull_request_target</h3><p>Workflow w kontekście bazowego repozytorium. Może mieć dostęp do prawa zapisu i sekretów. Służy np. do zaufanej automatyzacji metadanych.</p></div>
+      </div>
+      <p class="danger"><strong>Nie pobieraj i nie wykonuj niezaufanego kodu PR-a z uprawnieniami bazowego repozytorium.</strong></p>
+      <p>Zmiana triggera nie jest bezpieczną „naprawą” braku sekretów w zwykłym PR.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request_target">pull_request_target — kontekst i ostrzeżenia</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="schedule" data-title="Schedule — cron, strefa czasowa i ograniczenia" data-section="zdarzenia">
+    <div class="content">
+      <div class="kicker">Okresowe uruchomienie // GitHub.com</div>
+      <h2>Harmonogram korzysta <span class="accent">z gałęzi domyślnej</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">on:
+  schedule:
+    - cron: '15 5 * * 1-5'
+      timezone: Europe/Warsaw</code></pre>
+        <p>05:15 od poniedziałku do piątku w strefie Europe/Warsaw. Bez <code>timezone</code> domyślną strefą jest UTC.</p>
+      </div>
+      <ul>
+        <li>Cron: minuta, godzina, dzień miesiąca, miesiąc, dzień tygodnia. Najkrótszy obsługiwany interwał to 5 minut.</li>
+        <li><strong class="danger">Plik workflow i wykonywany commit pochodzą z gałęzi domyślnej.</strong></li>
+        <li><strong class="danger">Obciążenie usługi może opóźnić lub spowodować pominięcie run.</strong> To nie zegar czasu rzeczywistego.</li>
+        <li>W publicznym repozytorium 60 dni bez aktywności wyłącza zaplanowane uruchomienia.</li>
+      </ul>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule">Schedule — cron, timezone i opóźnienia</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="manual-dispatch" data-title="Workflow dispatch — ręczne uruchomienie" data-section="zdarzenia">
+    <div class="content">
+      <div class="kicker">Decyzja człowieka staje się zdarzeniem</div>
+      <h2>Ręczny start przez <span class="accent">Run workflow</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">on:
+  workflow_dispatch:</code></pre>
+      <ul>
+        <li>Najpierw umieść workflow na gałęzi domyślnej, aby korzystać z przycisku Run workflow.</li>
+        <li>W UI wybieramy gałąź uruchomienia; API i CLI również potrafią wywołać dispatch.</li>
+        <li>Można zdefiniować formularz inputów — zrobimy to w następnej sekcji.</li>
+        <li>Checks z <code>workflow_dispatch</code> nie spełniają wymaganych checks w rulesecie gałęzi, nawet dla tego samego SHA. Do sprawdzeń PR używamy <code>pull_request</code>.</li>
+      </ul>
+      <p class="source-links"><a href="https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks">Required status checks — ręczne uruchomienia</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="skip-checks" data-title="Skip w komunikacie commita" data-section="zdarzenia">
+    <div class="content">
+      <div class="kicker">Pominięcie workflow nie oznacza sukcesu</div>
+      <h2>Skip jest częścią <span class="accent">komunikatu commita</span></h2>
+      <div class="two">
+        <div>
+          <h3>Krótki znacznik</h3>
+          <pre><code class="language-text">docs: popraw opis [skip ci]</code></pre>
+          <p>Także: <code>[ci skip]</code>, <code>[skip actions]</code>, <code>[actions skip]</code>, <code>[no ci]</code>.</p>
+        </div>
+        <div>
+          <h3>Pełny komunikat z trailerem</h3>
+          <pre><code class="language-text">docs: popraw opis
+
+Uzupełnij przykład w dokumentacji.
+
+
+skip-checks: true</code></pre>
+          <p class="small">Przed trailerem są dwie puste linie. <code>git commit --cleanup=verbatim</code> pozwala je zachować.</p>
+        </div>
+      </div>
+      <p>Dotyczy <code>push</code> i <code>pull_request</code>; dla PR liczy się komunikat HEAD commita. Nie wyłącza <code>pull_request_target</code>, schedule ani dispatch.</p>
+      <p class="danger">Wymagany check pominiętego workflow może pozostać Pending / Expected i blokować merge.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs">Skipping workflow runs</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="pr-ref-sha" data-title="PR — base, head, SHA i merge ref" data-section="zdarzenia">
+    <div class="content">
+      <div class="kicker">Otwarty PR #42: feature/date → main</div>
+      <h2>Którą rewizję <span class="accent">sprawdza PR?</span></h2>
+      <table class="comparison">
+        <thead><tr><th>Pole</th><th>push do main</th><th>pull_request #42</th></tr></thead>
+        <tbody>
+          <tr><td><code>github.ref</code></td><td><code>refs/heads/main</code></td><td><code>refs/pull/42/merge</code></td></tr>
+          <tr><td><code>github.sha</code></td><td>Commit z push</td><td>Przygotowany commit scalenia PR-a</td></tr>
+          <tr><td><code>github.head_ref</code></td><td>Pusty tekst</td><td><code>feature/date</code></td></tr>
+          <tr><td><code>github.base_ref</code></td><td>Pusty tekst</td><td><code>main</code></td></tr>
+          <tr><td><code>github.event.pull_request.head.sha</code></td><td>Brak pola PR</td><td>Ostatni commit gałęzi autora</td></tr>
+        </tbody>
+      </table>
+      <p>Domyślny checkout dla zwykłego PR sprawdza przygotowane połączenie zmian z bazą, a nie tylko HEAD autora.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request">pull_request — SHA i ref</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="nieaktualny-main" data-title="Feature ze starego main a aktualność sprawdzenia" data-section="zdarzenia">
+    <div class="content">
+      <div class="kicker">Zielony wynik opisuje konkretną rewizję</div>
+      <h2>Main może pójść <span class="accent">naprzód po teście</span></h2>
+      <svg class="git-graph" viewBox="0 0 1000 230" role="img" aria-labelledby="stale-title stale-desc">
+        <title id="stale-title">Test połączenia PR-a z bazą nie zamraża main</title><desc id="stale-desc">Feature wychodzi z A. Main przechodzi do B. Testowy merge łączy B i F. Późniejszy commit C na main nie jest częścią wcześniejszego testowanego połączenia.</desc>
+        <text class="main-text" x="15" y="45">main</text><text class="feature-text" x="15" y="175">feature</text>
+        <path class="main-line" d="M155 40 H950"/><path class="feature-line" d="M230 40 C280 40 280 170 330 170 H690"/><path class="transfer-line" d="M490 40 L720 100 M620 170 L720 100"/>
+        <g class="main-dot"><circle cx="230" cy="40" r="9"/><circle cx="490" cy="40" r="9"/><circle cx="880" cy="40" r="9"/></g><g class="feature-dot"><circle cx="620" cy="170" r="9"/></g><circle class="release-dot" cx="720" cy="100" r="10"/>
+        <g class="commit-text"><text x="220" y="20">A</text><text x="480" y="20">B</text><text x="870" y="20">C</text><text x="610" y="205">F</text></g><text class="caption-text" x="750" y="105">test B + F</text>
+      </svg>
+      <ul>
+        <li>Merge ref pozwala testować połączenie nawet wtedy, gdy feature powstał ze starszego main.</li>
+        <li>Konflikt scalenia może uniemożliwić start zwykłego workflow PR.</li>
+        <li>Nie zakładaj, że każdy późniejszy push do main ponownie sprawdzi wszystkie otwarte PR-y.</li>
+      </ul>
+      <p>Wymaganie aktualnej bazy albo merge queue pomaga kontrolować stan tuż przed scaleniem.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="refs-actions-i-kodu" data-title="Ref action a ref pobieranego kodu" data-section="zdarzenia">
+    <div class="content">
+      <div class="kicker">Dwa niezależne wybory</div>
+      <h2><code>@v7</code> nie jest <span class="accent">wersją aplikacji</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">- uses: actions/checkout@v7
+  with:
+    ref: ${{ github.sha }}</code></pre>
+      <table class="comparison">
+        <thead><tr><th>Zapis</th><th>Co wybiera?</th></tr></thead>
+        <tbody>
+          <tr><td><code>actions/checkout@v7</code></td><td>Kod action checkout w repozytorium jej autora.</td></tr>
+          <tr><td><code>with.ref</code></td><td>Rewizję repozytorium pobieraną przez checkout.</td></tr>
+          <tr><td><code>owner/repo/path@ref</code></td><td>Katalog z metadata action przy wskazanym ref.</td></tr>
+          <tr><td><code>./.github/actions/backend</code></td><td>Lokalny katalog action, bez dopisywania <code>@ref</code>.</td></tr>
+        </tbody>
+      </table>
+      <p>Zwykle pomijamy <code>with.ref</code>, pozostawiając domyślną rewizję zdarzenia. W samym <code>uses</code> ref musi być statyczny — nie tworzymy go wyrażeniem.</p>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-wejscia" data-title="Wejścia i konteksty" data-section="wejscia" data-section-start data-section-title="Wejścia i konteksty">
+    <div class="content">
+      <div class="kicker">07 // Konfiguracja wykonania</div>
+      <h2>Skąd workflow <span class="accent">bierze dane?</span></h2>
+      <p class="lead">Formularz, zdarzenie, runner i ustawienia repozytorium są różnymi źródłami wartości.</p>
+      <div class="section-topics"><span>Inputs</span><span>Env, vars, secrets</span><span>GITHUB_TOKEN</span></div>
+    </div>
+  </section>
+
+  <section class="slide" id="formularz-inputs" data-title="Deklaracja formularza Run workflow" data-section="wejscia">
+    <div class="content">
+      <div class="kicker">Fragment on.workflow_dispatch</div>
+      <h2>Zadeklaruj <span class="accent">formularz uruchomienia</span></h2>
+      <div class="code-and-notes">
+        <pre><code class="language-yaml" data-embedded="github-actions">on:
+  workflow_dispatch:
+    inputs:
+      configuration:
+        description: Konfiguracja builda
+        type: choice
+        options: [Debug, Release]
+        default: Release
+        required: true
+      verbose:
+        description: Pokaż szczegóły
+        type: boolean
+        default: false</code></pre>
+        <div>
+          <p><code>choice</code> tworzy wybór wartości. <code>boolean</code> daje przełącznik.</p>
+          <p>Nazwy <code>configuration</code> i <code>verbose</code> będą kluczami kontekstu <code>inputs</code>.</p>
+          <p>Input nie jest miejscem na hasło czy token.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-dispatch-inputs" data-title="Workflow dispatch — formularz wejść" data-section="wejscia">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Inputy: <span class="accent">formularz Run workflow</span></h2>
+      <figure class="screenshot" data-screenshot="dispatch-inputs" data-screenshot-source="browser" data-screenshot-caption="Formularz Run workflow: selektor gałęzi, wybór Debug/Release i checkbox Pokaż szczegóły.">
+        <a class="screenshot-link" href="screenshots/dispatch-inputs.png" target="_blank" rel="noopener" aria-label="Otwórz formularz uruchomienia workflow w pełnym rozmiarze">
+          <img src="screenshots/dispatch-inputs.png" alt="Rozwinięty formularz Run workflow z gałęzią, konfiguracją Debug lub Release i polem Pokaż szczegóły." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Typy choice i boolean tworzą różne kontrolki formularza.</span><a href="screenshots/dispatch-inputs.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="odczyt-inputs" data-title="Inputs w env, if i run-name" data-section="wejscia">
+    <div class="content">
+      <div class="kicker">Odczyt pól z poprzedniego slajdu</div>
+      <h2>Wartość formularza trafia <span class="accent">do inputs</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">run-name: "CI · ${{ inputs.configuration }}"</code></pre>
+      <p class="small">Odczyt tego samego inputu w liście steps:</p>
+      <pre><code class="language-yaml" data-embedded="github-actions">- name: Pokaż wybrany tryb
+  env:
+    CONFIGURATION: ${{ inputs.configuration }}
+  run: |
+    printf 'Tryb: %s\n' "$CONFIGURATION"
+- name: Dodatkowe informacje
+  if: ${{ inputs.verbose }}
+  run: echo "Włączono szczegółowe informacje"</code></pre>
+      <ul>
+        <li><code>${{ ... }}</code> odczytuje wartość w silniku Actions.</li>
+        <li><code>env</code> przekazuje ją jako tekst do procesu Bash.</li>
+        <li><code>if</code> może bezpośrednio użyć boolean z typowanego inputu.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide" id="typy-inputs" data-title="Typowane wejścia workflow i tekstowe interfejsy" data-section="wejscia">
+    <div class="content">
+      <div class="kicker">Typ zależy od granicy</div>
+      <h2>Typy deklarujemy <span class="accent">na wejściu workflow</span></h2>
+      <table class="comparison">
+        <thead><tr><th>Interfejs</th><th>Typy / sposób odczytu</th></tr></thead>
+        <tbody>
+          <tr><td><code>workflow_dispatch.inputs</code></td><td>string, boolean, number, choice, environment. Choice i environment wybierają tekst.</td></tr>
+          <tr><td><code>workflow_call.inputs</code></td><td>string, boolean, number. Caller przekazuje zgodną wartość.</td></tr>
+          <tr><td>Inputy action, także composite</td><td>Tekst; brak deklaracji <code>type: boolean</code> jak w workflow_call.</td></tr>
+          <tr><td><code>env</code> i outputs</td><td>Tekst, nawet jeśli wygląda jak <code>false</code>, liczba lub JSON.</td></tr>
+        </tbody>
+      </table>
+      <p>W dispatch używaj kontekstu <code>inputs</code>, który zachowuje typy. Wariant <code>github.event.inputs</code> przekazuje wartości tekstowe.</p>
+      <p>Konsument nadal powinien sprawdzić dozwolone wartości i zakres, np. czy liczba jest dodatnia.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="praktyczne-konteksty" data-title="Przydatne pola github i runner" data-section="wejscia">
+    <div class="content">
+      <div class="kicker">Odczytuj konkretne pola, nie cały obiekt</div>
+      <h2>Kontekst ma <span class="accent">konkretne źródło</span></h2>
+      <table class="comparison">
+        <thead><tr><th>Pole</th><th>Przydatna informacja</th></tr></thead>
+        <tbody>
+          <tr><td><code>github.event_name</code></td><td>Rodzaj zdarzenia, np. pull_request.</td></tr>
+          <tr><td><code>github.ref</code> / <code>github.sha</code></td><td>Ref i rewizja konkretnego zdarzenia.</td></tr>
+          <tr><td><code>github.actor</code></td><td>Kto zainicjował uruchomienie; to nie zawsze autor PR-a.</td></tr>
+          <tr><td><code>github.event.pull_request.user.login</code></td><td>Autor PR-a, gdy zdarzenie zawiera ten obiekt.</td></tr>
+          <tr><td><code>runner.os</code> / <code>runner.arch</code></td><td>System i architektura, np. Linux / X64.</td></tr>
+          <tr><td><code>runner.tool_cache</code></td><td>Katalog narzędzi runnera; nie cache zależności aplikacji.</td></tr>
+        </tbody>
+      </table>
+      <p>Nie każdy kontekst jest dostępny w każdym polu. Na przykład <code>runner</code> nie istnieje jeszcze podczas oceny warunku joba.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability">Tabela dostępności kontekstów</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="env-vars-secrets" data-title="Env, vars i secrets" data-section="wejscia">
+    <div class="content">
+      <div class="kicker">Konfiguracja procesu i ustawienia repozytorium</div>
+      <h2>Jawna konfiguracja <span class="accent">i chronione wartości</span></h2>
+      <div class="two">
+        <div>
+          <pre><code class="language-yaml" data-embedded="github-actions">env:
+  CONFIGURATION: ${{ vars.BUILD_MODE }}
+  DOCS_TOKEN: ${{ secrets.DOCS_TOKEN }}</code></pre>
+          <p><code>env</code> udostępnia zmienne procesowi. Samo wstawienie wartości do env nie sprawia, że jest ona sekretna.</p>
+        </div>
+        <ul>
+          <li><code>vars</code>: niesekretna konfiguracja organizacji, repozytorium lub environment.</li>
+          <li><code>secrets</code>: chronione wartości dostępne tylko w dopuszczonym kontekście.</li>
+          <li>Nie wypisujemy całych kontekstów ani wartości sekretów.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-settings-vars" data-title="Vars — konfiguracja w ustawieniach" data-section="wejscia">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Variables: <span class="accent">konfiguracja Actions</span></h2>
+      <figure class="screenshot" data-screenshot="settings-vars" data-screenshot-source="browser" data-screenshot-caption="Settings → Secrets and variables → Actions → Variables: nazwa BUILD_MODE; wartości zasłonięte neutralną szarą maską.">
+        <a class="screenshot-link" href="screenshots/settings-vars.png" target="_blank" rel="noopener" aria-label="Otwórz ustawienia zmiennych Actions w pełnym rozmiarze">
+          <img src="screenshots/settings-vars.png" alt="Zakładka Variables w ustawieniach GitHub Actions z nazwą BUILD_MODE i zasłoniętymi wartościami zmiennych." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>BUILD_MODE odczytujemy przez vars. Wartości zasłonięto na potrzeby zrzutu.</span><a href="screenshots/settings-vars.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-settings-secrets" data-title="Secrets — nazwy bez ujawniania wartości" data-section="wejscia">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Secrets: <span class="accent">nazwa, nie wartość</span></h2>
+      <figure class="screenshot" data-screenshot="settings-secrets" data-screenshot-source="browser" data-screenshot-caption="Settings → Secrets and variables → Actions → Secrets: nazwy sekretów, bez ich wartości.">
+        <a class="screenshot-link" href="screenshots/settings-secrets.png" target="_blank" rel="noopener" aria-label="Otwórz listę nazw sekretów Actions w pełnym rozmiarze">
+          <img src="screenshots/settings-secrets.png" alt="Zakładka Secrets w ustawieniach GitHub Actions pokazująca nazwy sekretów, bez ich wartości." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Lista pozwala sprawdzić nazwę sekretu bez pokazywania chronionej wartości.</span><a href="screenshots/settings-secrets.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="uprawnienia-tokena" data-title="Minimalne uprawnienia GITHUB_TOKEN" data-section="wejscia">
+    <div class="content">
+      <div class="kicker">Zanim wywołamy API</div>
+      <h2>Token dostaje <span class="accent">tylko potrzebne prawa</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions"># Domyślnie w workflow
+permissions:
+  contents: read
+
+# Osobno w jobie komentującym PR
+# permissions:
+#   pull-requests: write</code></pre>
+        <ul>
+          <li><code>GITHUB_TOKEN</code> jest krótkotrwałym tokenem dostarczanym dla joba.</li>
+          <li><code>contents: read</code> wystarcza do checkout kodu.</li>
+          <li>Odczyt listy plików PR wymaga odpowiedniego odczytu PR; komentarz wymaga zapisu.</li>
+          <li>Gdy określamy zestaw permissions, niewymienione uprawnienia mają wartość <code>none</code>.</li>
+        </ul>
+      </div>
+      <p>Permissions joba określa jego zestaw praw — nie dopisuje automatycznie pozostałych praw z workflow. Fork i polityki organizacji mogą dodatkowo ograniczyć dostęp.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#permissions">Workflow syntax — permissions</a></p>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-wyrazenia" data-title="Wyrażenia GitHub Actions" data-section="wyrazenia" data-section-start data-section-title="Wyrażenia">
+    <div class="content">
+      <div class="kicker">08 // Wybór i warunki</div>
+      <h2>Kiedy wykonać krok? <span class="accent">Jaką wybrać wartość?</span></h2>
+      <p class="lead">Expressions to mały język GitHub Actions, nie JavaScript ani Bash.</p>
+      <div class="section-topics"><span>If</span><span>Funkcje</span><span>Typy i case()</span></div>
+    </div>
+  </section>
+
+  <section class="slide" id="proste-if" data-title="Prosty warunek if" data-section="wyrazenia">
+    <div class="content">
+      <div class="kicker">Najpierw pojedynczy warunek</div>
+      <h2><code>if</code> decyduje <span class="accent">przed uruchomieniem kroku</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">- name: Informacja po zmianie main
+  if: ${{ github.ref == 'refs/heads/main' }}
+  run: echo "To uruchomienie dotyczy main"</code></pre>
+      <ul>
+        <li><code>==</code> porównuje wartości. Tekst wewnątrz expression zapisujemy w pojedynczych apostrofach.</li>
+        <li>W polu <code>if</code> zwykle wolno pominąć <code>${{ }}</code>.</li>
+        <li><code>if: ${{ !cancelled() }}</code> chroni początkowe <code>!</code> przed interpretacją jako tag YAML.</li>
+        <li>Job-level <code>if</code> jest oceniane przed przydziałem runnera i rozwinięciem matrix.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide" id="if-branch-author" data-title="If — zdarzenie, gałąź i autor PR-a" data-section="wyrazenia">
+    <div class="content">
+      <div class="kicker">Łączenie warunków i zapis wieloliniowy</div>
+      <h2>Warunek może być <span class="accent">czytelny także w kilku liniach</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">- name: Informacja dla autora PR
+  if: &gt;-
+    ${{ github.event_name == 'pull_request'
+        &amp;&amp; github.base_ref == 'main'
+        &amp;&amp; github.event.pull_request.user.login != 'dependabot[bot]' }}
+  run: echo "PR do main od autora innego niż Dependabot"</code></pre>
+      <p><code>&amp;&amp;</code> wymaga spełnienia wszystkich warunków; <code>||</code> daje alternatywę. Nawiasy pozwalają jawnie grupować warunki.</p>
+      <p>Najpierw sprawdzamy typ zdarzenia. W PR gałąź docelowa jest w <code>base_ref</code>, a autor w payloadzie PR-a.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="brakujaca-wlasciwosc" data-title="Nieistniejąca właściwość daje pusty tekst" data-section="wyrazenia">
+    <div class="content">
+      <div class="kicker">Literówka może nie zgłosić błędu</div>
+      <h2>Brak pola może oznaczać <span class="orange"><code>''</code></span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">env:
+  TITLE: ${{ vars.REPORT_TITLE || 'Raport CI' }}
+  SHA: ${{ github['sha'] }}</code></pre>
+        <ul>
+          <li>Odczyt nieistniejącej właściwości zwraca pusty tekst.</li>
+          <li><code>github.sha</code> i <code>github['sha']</code> wskazują to samo pole.</li>
+          <li><code>||</code> jest wygodnym fallbackiem dla niepustej etykiety.</li>
+        </ul>
+      </div>
+      <p>Brak właściwości w dostępnym kontekście to coś innego niż użycie niedozwolonego kontekstu albo błędna składnia expression.</p>
+      <p>Jeśli wartość jest obowiązkowa, waliduj ją zamiast ukrywać brak domyślnym tekstem.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="funkcje-tekstu" data-title="Contains, startsWith, endsWith, format i join" data-section="wyrazenia">
+    <div class="content">
+      <div class="kicker">Pytania o tekst i budowanie etykiet</div>
+      <h2>Małe funkcje, <span class="accent">konkretne zastosowania</span></h2>
+      <table class="comparison">
+        <thead><tr><th>Wyrażenie</th><th>Wynik / zastosowanie</th></tr></thead>
+        <tbody>
+          <tr><td><code>contains('frontend', 'end')</code></td><td>true — fragment tekstu.</td></tr>
+          <tr><td><code>startsWith(github.ref, 'refs/tags/')</code></td><td>Czy zdarzenie dotyczy tagu?</td></tr>
+          <tr><td><code>endsWith('ApiTests.cs', 'Tests.cs')</code></td><td>true — końcówka tekstu.</td></tr>
+          <tr><td><code>format('CI #{0}', github.run_number)</code></td><td>Etykieta, np. CI #42.</td></tr>
+          <tr><td><code>join(fromJSON('["api","ui"]'), ' + ')</code></td><td>api + ui.</td></tr>
+        </tbody>
+      </table>
+      <p><code>contains</code> dla listy szuka całego elementu, a dla tekstu podtekstu. Funkcje porównujące tekst ignorują wielkość liter.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/expressions">Expressions — funkcje</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="json-w-expression" data-title="ToJSON i fromJSON — krótka konwersja" data-section="wyrazenia">
+    <div class="content">
+      <div class="kicker">Tekst JSON a wartość w wyrażeniu</div>
+      <h2><code>fromJSON</code> odtwarza <span class="accent">typ wartości</span></h2>
+      <table class="comparison">
+        <thead><tr><th>Wyrażenie</th><th>Wynik</th></tr></thead>
+        <tbody>
+          <tr><td><code>fromJSON('false')</code></td><td>Boolean false.</td></tr>
+          <tr><td><code>fromJSON('3') &gt; 1</code></td><td>true — porównanie liczb.</td></tr>
+          <tr><td><code>fromJSON('["backend","frontend"]')</code></td><td>Lista dwóch tekstów.</td></tr>
+          <tr><td><code>toJSON(true)</code></td><td>Tekst JSON: <code>true</code>.</td></tr>
+        </tbody>
+      </table>
+      <p>Pusty lub niepoprawny JSON powoduje błąd parsowania. Poprawny JSON nadal wymaga sprawdzenia oczekiwanego kształtu i wartości.</p>
+      <p>Przyda się przy przenoszeniu listy komponentów do matrix. Nie serializujemy całego kontekstu <code>github</code> z tokenem do logów.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="hashfiles" data-title="HashFiles — odcisk plików i brak dopasowania" data-section="wyrazenia">
+    <div class="content">
+      <div class="kicker">Funkcja czyta pliki w workspace</div>
+      <h2>Brak pliku to <span class="orange">pusty hash, nie wyjątek</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions"># Fragment steps, po checkout
+- run: test -f package-lock.json
+- name: Odcisk zależności
+  env:
+    LOCK_HASH: ${{ hashFiles('package-lock.json') }}
+  run: printf '%s\n' "$LOCK_HASH"</code></pre>
+      <ul>
+        <li><code>hashFiles</code> tworzy odcisk SHA-256 zestawu dopasowanych plików.</li>
+        <li>Wzorce odnoszą się do <code>GITHUB_WORKSPACE</code>, nie do <code>working-directory</code> kroku.</li>
+        <li><strong>Brak dopasowań zwraca <code>''</code>.</strong> Jeśli plik jest wymagany, osobny <code>test -f</code> wykrywa jego brak.</li>
+      </ul>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#hashfiles">hashFiles — kontrakt</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="falsy-i-operatory" data-title="Pułapka wyboru przez operator && oraz ||" data-section="wyrazenia">
+    <div class="content">
+      <div class="kicker">Nie ma operatora JavaScript ?:</div>
+      <h2><code>A &amp;&amp; B || C</code> <span class="orange">nie zawsze wybiera B</span></h2>
+      <table class="comparison">
+        <thead><tr><th>Wyrażenie / wartość</th><th>Co się stanie?</th></tr></thead>
+        <tbody>
+          <tr><td><code>true &amp;&amp; 'Release' || 'Debug'</code></td><td>Release — niepusty tekst jest truthy.</td></tr>
+          <tr><td><code>true &amp;&amp; 0 || 2</code></td><td>2 — zero uruchamia fallback.</td></tr>
+          <tr><td><code>true &amp;&amp; false || true</code></td><td>true — zamierzone false zostaje zastąpione.</td></tr>
+          <tr><td><code>false</code>, <code>0</code>, <code>null</code>, <code>''</code></td><td>Wartości falsy.</td></tr>
+          <tr><td><code>'false'</code>, <code>'0'</code></td><td>Niepuste teksty, czyli truthy.</td></tr>
+        </tbody>
+      </table>
+      <p>Dlatego tekstowej flagi z env nie używamy jako samodzielnego warunku: porównujemy ją do <code>'true'</code> albo świadomie parsujemy.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="case" data-title="Case wybiera pierwszą pasującą wartość" data-section="wyrazenia">
+    <div class="content">
+      <div class="kicker">case(warunek, wartość, …, domyślna)</div>
+      <h2><code>case()</code> zachowuje <span class="accent">także false i zero</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">env:
+  RUN_KIND: &gt;-
+    ${{ case(
+      github.event_name == 'pull_request',
+      'PR',
+      startsWith(github.ref, 'refs/tags/'),
+      'tag',
+      'branch'
+    ) }}</code></pre>
+        <div>
+          <p>Wygrywa pierwsza pasująca para. Ostatni argument jest wartością domyślną.</p>
+          <p>Warunki muszą mieć typ <strong>boolean</strong>. Tekst <code>'true'</code> ani liczba <code>1</code> go nie zastępują.</p>
+          <ul>
+            <li><code>case(true, 0, 2)</code> → <strong>0</strong></li>
+            <li><code>case(true, false, true)</code> → <strong>false</strong></li>
+            <li><code>case(true, '', 'fallback')</code> → <strong>pusty tekst</strong></li>
+          </ul>
+        </div>
+      </div>
+      <p>Pary warunek–wynik i końcowy default dają nieparzystą liczbę argumentów, co najmniej 3. Po przekazaniu wyniku do env liczba lub boolean stają się tekstem.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#case">Expressions — case</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="warunki-statusu" data-title="Success, failure, cancelled i always" data-section="wyrazenia">
+    <div class="content">
+      <div class="kicker">Co po błędzie poprzedniego kroku?</div>
+      <h2>Warunek statusu <span class="accent">zmienia dalszy przebieg</span></h2>
+      <table class="comparison">
+        <thead><tr><th>Warunek</th><th>Typowe zastosowanie</th></tr></thead>
+        <tbody>
+          <tr><td><code>success()</code></td><td>Domyślna kontynuacja po sukcesie; dodawana do if bez funkcji statusu.</td></tr>
+          <tr><td><code>failure()</code></td><td>Dodatkowa diagnostyka po niepowodzeniu.</td></tr>
+          <tr><td><code>!cancelled()</code></td><td>Zebranie wyniku także po błędzie, ale nie po anulowaniu.</td></tr>
+          <tr><td><code>always()</code></td><td>Warunek prawdziwy także po błędzie i anulowaniu, np. dla końcowego gate.</td></tr>
+        </tbody>
+      </table>
+      <p>Zielony krok zbierania raportu <strong>nie cofa</strong> błędu testów. Awaria runnera może uniemożliwić nawet krok z <code>always()</code>.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#status-check-functions">Status check functions</a></p>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-skrypty" data-title="Skrypty i GitHub API" data-section="skrypty" data-section-start data-section-title="Skrypty i API">
+    <div class="content">
+      <div class="kicker">09 // Wykonanie pracy</div>
+      <h2>Workflow organizuje. <span class="accent">Skrypt wykonuje.</span></h2>
+      <p class="lead">Komendy, pliki i API wymagają kodu. Dobierz język do zadania, nie do długości YAML.</p>
+      <div class="section-topics"><span>Bash i powłoki</span><span>Logi i annotations</span><span>github-script i .NET</span></div>
+    </div>
+  </section>
+
+  <section class="slide" id="bash-run" data-title="Bash — dane przez env, polecenia w run" data-section="skrypty">
+    <div class="content">
+      <div class="kicker">Fragment steps w repozytorium .NET</div>
+      <h2><code>run: |</code> zawiera <span class="accent">zwykły skrypt</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">- name: Testy w wybranej konfiguracji
+  shell: bash
+  env:
+    CONFIGURATION: ${{ inputs.configuration }}
+  run: |
+    case "$CONFIGURATION" in
+      Debug|Release) ;;
+      *) echo "::error::Nieznana konfiguracja"; exit 1 ;;
+    esac
+    dotnet test --configuration "$CONFIGURATION"</code></pre>
+      <p>Actions przygotowuje env, a Bash odczytuje <code>"$CONFIGURATION"</code>. Cudzysłów zachowuje wartość jako jeden argument.</p>
+      <p>Walidacja kontraktu jest częścią skryptu. SDK i kod repozytorium muszą być przygotowane we wcześniejszych krokach.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="defaults-run" data-title="Defaults.run — domyślna powłoka i katalog" data-section="skrypty">
+    <div class="content">
+      <div class="kicker">Wspólne ustawienia poleceń</div>
+      <h2>Ustal domyślną <span class="accent">powłokę i katalog</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">defaults:
+  run:
+    shell: bash
+    working-directory: backend</code></pre>
+      <ul>
+        <li>Te wartości dotyczą kroków <code>run</code> w workflow.</li>
+        <li>Ścieżka musi istnieć, np. po checkout.</li>
+        <li>Nie zmieniają katalogu ani znaczenia inputów action wywołanej przez <code>uses</code>.</li>
+      </ul>
+      <p>Powtarzającą się konfigurację zapisujemy raz, a lokalny wyjątek umieszczamy przy kroku, którego dotyczy.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="defaults-override" data-title="Nadpisanie defaults na poziomie joba i kroku" data-section="skrypty">
+    <div class="content">
+      <div class="kicker">Workflow → job → step</div>
+      <h2>Najbliższe ustawienie <span class="accent">wygrywa</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions"># Job nadpisuje poprzednie defaults
+jobs:
+  docs:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - uses: actions/checkout@v7
+      - run: pwd
+      - run: pwd
+        working-directory: .</code></pre>
+        <div>
+          <p>Workflow wybrał Bash i <code>backend</code>.</p>
+          <p>Job zmienia katalog na <code>docs</code>. Pierwszy <code>pwd</code> pokaże katalog dokumentacji.</p>
+          <p>Ostatni krok wybiera <code>.</code>, czyli korzeń workspace. Powłoką nadal jest Bash.</p>
+        </div>
+      </div>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defaultsrun">Defaults i reguły nadpisywania</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="bash-bledy" data-title="Exit code, pipefail i tee" data-section="skrypty">
+    <div class="content">
+      <div class="kicker">Kolor tekstu nie jest kodem zakończenia</div>
+      <h2>Log z <code>tee</code> nie może <span class="orange">ukryć błędu</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">- name: Testy z kopią logu
+  shell: bash
+  run: |
+    set -u
+    dotnet test --configuration Release 2&gt;&amp;1 | tee tests.log
+    echo "Testy zakończone sukcesem"</code></pre>
+      <ul>
+        <li>Kod <code>0</code> oznacza sukces; niezerowy kod oznacza błąd.</li>
+        <li>Jawne <code>shell: bash</code> dodaje <code>-e</code> i <code>-o pipefail</code>. Błąd testów nie ginie za udanym <code>tee</code>.</li>
+        <li><code>set -u</code> wykrywa użycie niezdefiniowanej zmiennej.</li>
+        <li><code>-e</code> ma wyjątki, np. w warunkach <code>if</code> i listach <code>&amp;&amp;</code>/<code>||</code>. Krytyczny warunek sprawdzaj jawnie.</li>
+      </ul>
+      <p>Domyślna powłoka bez jawnego <code>shell</code> może używać innych opcji. Nie dodawaj <code>|| true</code> do obowiązkowych testów.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="custom-shell-dotnet" data-title="Custom shell i program plikowy .NET 10" data-section="skrypty">
+    <div class="content">
+      <div class="kicker">Wybór interpretera i runtime</div>
+      <h2>Skrypt nie musi <span class="accent">być Bashem</span></h2>
+      <div class="two">
+        <div><h3>Custom shell · .NET 10</h3><pre><code class="language-yaml" data-embedded="github-actions" data-example="dotnet-custom-shell">- uses: actions/setup-dotnet@v6
+  with:
+    dotnet-version: '10.x'
+- name: Program C# jako krok
+  shell: dotnet run --file {0}
+  run: |
+    var title = "Build";
+    Console.WriteLine($"Length: {title.Length}");</code></pre><p>Runner podstawia ścieżkę pliku za <code>{0}</code>. Z <code>--file</code> rozszerzenie <code>.tmp</code> nie przeszkadza; wynik to <code>Length: 5</code>.</p></div>
+        <div><h3>Program plikowy .NET 10</h3><pre><code class="language-csharp">// scripts/summary.cs
+var title = "Build";
+Console.WriteLine($"Length: {title.Length}");</code></pre><pre><code class="language-bash">dotnet run --file scripts/summary.cs</code></pre><p>Ten sam program można zapisać w repozytorium. Wymaga SDK i pliku po checkout, ale nie osobnego <code>.csproj</code>.</p></div>
+      </div>
+      <p>Program plikowy uruchamiany przez <code>dotnet run</code> to nie <code>dotnet-script</code>. Ten drugi jest osobnym narzędziem.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell">Custom shell</a> · <a href="https://learn.microsoft.com/en-us/dotnet/core/sdk/file-based-apps">.NET — file-based apps</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="annotations" data-title="Workflow commands i adnotacje w PR" data-section="skrypty">
+    <div class="content">
+      <div class="kicker">Komunikat dla runnera, nie tylko tekst w terminalu</div>
+      <h2>Powiąż ostrzeżenie <span class="accent">z plikiem i linią</span></h2>
+      <pre><code class="language-bash">echo "::group::Sprawdzanie dokumentacji"
+echo "::notice::Rozpoczęto analizę"
+echo "::warning file=README.md,line=7::Brakuje opisu parametru"
+echo "::endgroup::"</code></pre>
+      <ul>
+        <li><code>::notice::</code>, <code>::warning::</code> i <code>::error::</code> tworzą adnotacje.</li>
+        <li>Nazwa pliku i linia pomagają pokazać problem przy zmianie w PR.</li>
+        <li>Samo <code>::error::</code> nie ustawia niezerowego exit code. Gdy problem ma zatrzymać job, skrypt musi również zgłosić błąd wykonania.</li>
+      </ul>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands">Workflow commands</a></p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-pr-annotations" data-title="Adnotacja — plik, linia i ostrzeżenie" data-section="skrypty">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Adnotacja: <span class="accent">ostrzeżenie przy pliku</span></h2>
+      <figure class="screenshot" data-screenshot="pr-annotations" data-screenshot-source="browser" data-screenshot-caption="Adnotacja warning dla README.md:7 w widoku PR-a.">
+        <a class="screenshot-link" href="screenshots/pr-annotations.png" target="_blank" rel="noopener" aria-label="Otwórz adnotację w PR w pełnym rozmiarze">
+          <img src="screenshots/pr-annotations.png" alt="Ostrzeżenie w pull requeście wskazujące plik README.md i linię 7." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Komunikat ma poziom i lokalizację; nie jest tylko wierszem zwykłego logu.</span><a href="screenshots/pr-annotations.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="job-summary" data-title="GITHUB_STEP_SUMMARY — czytelny wynik dla człowieka" data-section="skrypty">
+    <div class="content">
+      <div class="kicker">Markdown w podsumowaniu run</div>
+      <h2>Nie zmuszaj odbiorcy <span class="accent">do czytania całego logu</span></h2>
+      <pre><code class="language-bash">{
+  printf '## Sprawdzenie zmiany\n\n'
+  printf '%s\n' '- Build zakończony.'
+  printf '%s\n' '- Raport jest dostępny w artefaktach.'
+} &gt;&gt; "$GITHUB_STEP_SUMMARY"</code></pre>
+      <p>Runner składa treść podsumowania z kroków joba. Piszemy do pliku wskazanego przez zmienną środowiskową.</p>
+      <p>Podsumowanie opisuje wynik, ale nie zmienia statusu joba. W praktyce treść powinna wynikać z rzeczywiście wykonanych sprawdzeń.</p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-run-summary" data-title="Summary — Markdown dla odbiorcy" data-section="skrypty">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Summary: <span class="accent">czytelny wynik joba</span></h2>
+      <figure class="screenshot" data-screenshot="run-summary" data-screenshot-source="browser" data-screenshot-caption="Podsumowanie uruchomienia z wyrenderowanym Markdown Sprawdzenie zmiany.">
+        <a class="screenshot-link" href="screenshots/run-summary.png" target="_blank" rel="noopener" aria-label="Otwórz podsumowanie Markdown w pełnym rozmiarze">
+          <img src="screenshots/run-summary.png" alt="Podsumowanie GitHub Actions z sekcją Sprawdzenie zmiany wygenerowaną przez GITHUB_STEP_SUMMARY." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Treść GITHUB_STEP_SUMMARY pojawia się jako Markdown, poza logiem polecenia.</span><a href="screenshots/run-summary.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="github-script-komentarz" data-title="Github-script — komentarz do PR" data-section="skrypty">
+    <div class="content">
+      <div class="kicker">github-script // fragment joba dla on: pull_request // bez checkout</div>
+      <h2>Komentarz do PR <span class="accent">przez API</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">if: &gt;-
+  ${{ github.event.pull_request.head.repo.full_name
+      == github.repository }}
+runs-on: ubuntu-24.04
+permissions: {pull-requests: write}
+steps:
+  - uses: actions/github-script@v9
+    with:
+      script: |
+        await github.rest.issues.createComment({
+          ...context.repo,
+          issue_number: context.issue.number,
+          body: 'CI rozpoczęło sprawdzanie tej zmiany.'
+        });</code></pre>
+      <p>PR jest także issue. To zwykły komentarz, nie review linii. Rerun utworzy kolejny.</p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-api-pr-comment" data-title="API — komentarz bota w PR" data-section="skrypty">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>API: <span class="accent">komentarz github-actions[bot]</span></h2>
+      <figure class="screenshot" data-screenshot="api-pr-comment" data-screenshot-source="browser" data-screenshot-caption="Conversation PR-a: komentarz github-actions[bot] o rozpoczęciu sprawdzania zmiany.">
+        <a class="screenshot-link" href="screenshots/api-pr-comment.png" target="_blank" rel="noopener" aria-label="Otwórz komentarz bota w pełnym rozmiarze">
+          <img src="screenshots/api-pr-comment.png" alt="Komentarz github-actions[bot] w PR o treści CI rozpoczęło sprawdzanie tej zmiany." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Wywołanie issues.createComment tworzy zwykły komentarz w Conversation.</span><a href="screenshots/api-pr-comment.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="github-script-api" data-title="Github-script — github, context i core" data-section="skrypty">
+    <div class="content">
+      <div class="kicker">Ciało asynchronicznej funkcji JavaScript</div>
+      <h2>Klient API jest <span class="accent">już przygotowany</span></h2>
+      <table class="comparison">
+        <thead><tr><th>Obiekt</th><th>Rola</th></tr></thead>
+        <tbody>
+          <tr><td><code>github</code></td><td>Uwierzytelniony klient Octokit: REST, GraphQL i paginacja.</td></tr>
+          <tr><td><code>context</code></td><td>Dane repozytorium i zdarzenia w JavaScript.</td></tr>
+          <tr><td><code>core</code></td><td>Logi, adnotacje, summary, outputs i zgłaszanie niepowodzenia.</td></tr>
+        </tbody>
+      </table>
+      <pre><code class="language-javascript">if (!context.payload.pull_request) {
+  core.setFailed('Oczekiwano zdarzenia PR');
+  return;
+}</code></pre>
+      <p><code>await</code> czeka na operację API. Wyjątek lub <code>core.setFailed()</code> oznacza błąd; samo <code>return false</code> nie oznacza czerwonego kroku.</p>
+      <p class="source-links"><a href="https://github.com/actions/github-script/tree/v9.0.0">github-script — udostępnione obiekty i wyniki</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="github-script-zmienione-pliki" data-title="Paginacja API i wykrywanie zmian frontendu" data-section="skrypty">
+    <div class="content">
+      <div class="kicker">Ciało script w github-script // pull-requests: read</div>
+      <h2>Czy zmienił się <span class="accent">frontend?</span></h2>
+      <pre><code class="language-javascript" data-example="changed-paths">const pr = context.payload.pull_request;
+if (!pr) throw new Error('Oczekiwano PR');
+const files = await github.paginate(github.rest.pulls.listFiles, {
+  ...context.repo, pull_number: pr.number, per_page: 100
+});
+if (files.length &gt;= 3000) throw new Error('Przekroczono limit tej reguły');
+const paths = files.flatMap(file =>
+  [file.filename, file.previous_filename].filter(Boolean));
+require('node:fs').writeFileSync(
+  'changed-paths.json', JSON.stringify(paths));
+const frontend = paths.some(path => path.startsWith('frontend/'));
+core.notice(`Zmiana frontendu: ${frontend}`);</code></pre>
+      <p><code>paginate</code> pobiera kolejne strony; endpoint nadal ma limit 3000 plików. Przy zmianie nazwy uwzględniamy również poprzednią ścieżkę.</p>
+      <p>Plik <code>changed-paths.json</code> wykorzystamy w sekcji przepływu danych. Błędu API nie zamieniamy w pustą listę i sukces.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files">REST — lista plików PR-a</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="bash-js-dotnet" data-title="Ta sama operacja w Bash, github-script i .NET" data-section="skrypty">
+    <div class="content">
+      <div class="kicker">Wspólne wejście: env.CONFIGURATION</div>
+      <h2>Ten sam wynik, <span class="accent">trzy narzędzia</span></h2>
+      <div class="three">
+        <div><h3>Bash · run</h3><pre><code class="language-bash">printf 'Tryb: %s\n' \
+  "$CONFIGURATION"</code></pre></div>
+        <div><h3>github-script · script</h3><pre><code class="language-javascript">core.info('Tryb: ' +
+  process.env.CONFIGURATION);</code></pre></div>
+        <div><h3>.NET 10 · summary.cs</h3><pre><code class="language-csharp">var mode = Environment
+  .GetEnvironmentVariable(
+    "CONFIGURATION");
+Console.WriteLine(
+  $"Tryb: {mode}");</code></pre></div>
+      </div>
+      <p><strong>Bash</strong> dobrze łączy CLI i pliki. <strong>github-script</strong> upraszcza GitHub API. <strong>.NET</strong> pozwala wykorzystać znany język i rozbudować testowalną logikę w osobnym pliku.</p>
+      <p>Małej komendy nie trzeba opakowywać w API klienta. Rosnący algorytm warto wydzielić z YAML do wersjonowanego skryptu.</p>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-reuse" data-title="Wspólne procedury CI" data-section="reuse" data-section-start data-section-title="Wspólne procedury">
+    <div class="content">
+      <div class="kicker">10 // Reuse</div>
+      <h2>Wspólna lista kroków czy <span class="accent">cały job?</span></h2>
+      <p class="lead">Porównamy dwa opakowania tej samej procedury backendu: build i test w wybranej konfiguracji.</p>
+      <div class="section-topics"><span>Composite action</span><span>Reusable workflow</span><span>Dołączone skrypty</span></div>
+    </div>
+  </section>
+
+  <section class="slide" id="backend-composite" data-title="Backend jako composite action" data-section="reuse">
+    <div class="content">
+      <div class="kicker">.github/actions/backend/action.yml</div>
+      <h2>Composite grupuje <span class="accent">kroki backendu</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions" data-action="backend">name: Backend checks
+description: Build and test
+inputs:
+  configuration:
+    description: Build mode
+    default: Release
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        CONFIGURATION: ${{ inputs.configuration }}
+      run: |
+        dotnet build --configuration "$CONFIGURATION"
+        dotnet test --configuration "$CONFIGURATION"</code></pre>
+      <p>Action korzysta z runnera i workspace callera. Zakładamy przygotowany kod .NET i SDK; każdy run w composite podaje własny <code>shell</code>.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="backend-reusable" data-title="Ten sam backend jako reusable workflow" data-section="reuse">
+    <div class="content">
+      <div class="kicker">.github/workflows/backend.yml</div>
+      <h2>Reusable dostarcza <span class="accent">cały job backendu</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions" data-workflow="backend-reusable">on:
+  workflow_call:
+    inputs:
+      configuration: {type: string, default: Release}
+permissions: {contents: read}
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with: {dotnet-version: '10.x'}
+      - env: {CONFIGURATION: '${{ inputs.configuration }}'}
+        run: |
+          dotnet build --configuration "$CONFIGURATION"
+          dotnet test --configuration "$CONFIGURATION"</code></pre>
+      <p>Te same polecenia; teraz callee wybiera runnera i przygotowuje kod oraz SDK.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="reuse-callers" data-title="Wywołanie composite i reusable workflow" data-section="reuse">
+    <div class="content">
+      <div class="kicker">Ten sam backend // ten sam parametr Release</div>
+      <h2>Composite w kroku. <span class="accent">Reusable jako job.</span></h2>
+      <div class="two">
+        <div><h3>Fragment zwykłego joba</h3><pre><code class="language-yaml" data-embedded="github-actions">runs-on: ubuntu-24.04
+steps:
+  - uses: actions/checkout@v7
+  - uses: actions/setup-dotnet@v6
+    with: {dotnet-version: '10.x'}
+  - uses: ./.github/actions/backend
+    with:
+      configuration: Release</code></pre></div>
+        <div><h3>Fragment mapy jobs</h3><pre><code class="language-yaml" data-embedded="github-actions">backend:
+  uses: ./.github/workflows/backend.yml
+  with:
+    configuration: Release</code></pre><p>Obok tego <code>uses</code> nie dodajemy <code>runs-on</code> ani <code>steps</code>.</p></div>
+      </div>
+      <p>Lokalna action musi być na dysku po checkout. Lokalny reusable workflow GitHub odczytuje z commita callera; checkout wewnątrz niego służy pracy z kodem aplikacji.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="bundled-scripts" data-title="Skrypty dołączone do action i checkout" data-section="reuse">
+    <div class="content">
+      <div class="kicker">Dwa katalogi: workspace aplikacji i katalog action</div>
+      <h2>Action może dostarczyć <span class="accent">własny skrypt</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions"># Fragment runs.steps w composite
+- shell: bash
+  env:
+    ACTION_DIR: ${{ github.action_path }}
+    CONFIGURATION: ${{ inputs.configuration }}
+  run: bash "$ACTION_DIR/backend.sh"</code></pre>
+      <ul>
+        <li><code>github.action_path</code> wskazuje katalog z dołączonym <code>backend.sh</code>.</li>
+        <li>Zdalne <code>uses: owner/repo/path@ref</code> pobiera pakiet action i jego skrypty. Nie trzeba osobno checkoutować jej repozytorium.</li>
+        <li>Checkout kodu aplikacji jest nadal potrzebny, jeśli skrypt ma go budować.</li>
+        <li>Reusable workflow nie pobiera automatycznie wszystkich skryptów ze swojego repozytorium; domyślny checkout dotyczy repozytorium callera.</li>
+      </ul>
+      <p>Composite współdzieli środowisko joba. Reusable ma własny kontrakt inputs i secrets; nie otrzymuje automatycznie env callera i nie może podnieść jego uprawnień tokena.</p>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-dane" data-title="Przepływ danych" data-section="dane" data-section-start data-section-title="Przepływ danych">
+    <div class="content">
+      <div class="kicker">11 // Jeden scenariusz, kolejne granice</div>
+      <h2>Wykryj zmiany. Zbuduj. <span class="accent">Podsumuj wynik.</span></h2>
+      <p class="lead">Rozwijamy przykład z API PR-a, nie kolekcję niezależnych flag demonstracyjnych.</p>
+      <div class="flow flow-line"><div class="node">changed-paths.json</div><div class="arrow">→</div><div class="node">Plan komponentów</div><div class="arrow">→</div><div class="node">Wybrane buildy</div><div class="arrow">→</div><div class="node">Podsumowanie</div></div>
+      <p>Ten workflow nazywamy <strong>Component CI</strong>. Przekazujemy krótkie wartości przez outputs, a pliki przez artefakty.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="env-zakresy" data-title="Zakres env — workflow, job i step" data-section="dane">
+    <div class="content">
+      <div class="kicker">Najpierw konfiguracja w jednym jobie</div>
+      <h2>Env ma <span class="accent">lokalny zakres</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">env:
+  CONFIGURATION: Release
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    env:
+      CONFIGURATION: Debug
+    steps:
+      - run: echo "$CONFIGURATION"
+      - env:
+          CONFIGURATION: Release
+        run: echo "$CONFIGURATION"
+      - run: echo "$CONFIGURATION"</code></pre>
+        <div>
+          <p>Kolejne wartości to <strong>Debug → Release → Debug</strong>.</p>
+          <p>Definicja kroku wygrywa tylko na czas tego kroku. Nie zmienia trwale konfiguracji joba.</p>
+          <p>Env nie jest kanałem automatycznie przenoszącym dane do innego joba lub reusable workflow.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="github-env" data-title="GITHUB_ENV — dane dla następnych kroków" data-section="dane">
+    <div class="content">
+      <div class="kicker">Ten sam job // kolejne procesy</div>
+      <h2>Nowy krok to <span class="accent">nowa powłoka</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">- name: Ustal katalog raportów
+  run: echo "REPORT_DIR=reports" &gt;&gt; "$GITHUB_ENV"
+- name: Przygotuj katalog
+  run: |
+    mkdir -p "$REPORT_DIR"
+    printf 'Raporty: %s\n' "$REPORT_DIR"</code></pre>
+      <ul>
+        <li>Zwykłe <code>export</code> w jednym run nie przechodzi do następnego procesu.</li>
+        <li><code>GITHUB_ENV</code> jest plikiem odczytywanym przez runnera po kroku.</li>
+        <li>Zapisana wartość jest dostępna w <strong>następnych</strong> krokach tego joba, nie wstecznie w bieżącej powłoce.</li>
+      </ul>
+      <p>To ustawienie środowiska. Dla nazwanego wyniku producenta użyjemy <code>GITHUB_OUTPUT</code>.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="plan-komponentow" data-title="Z listy plików do planu komponentów" data-section="dane">
+    <div class="content">
+      <div class="kicker">Skrypt Bash po kroku API z poprzedniej sekcji</div>
+      <h2>Lista ścieżek staje się <span class="accent">planem pracy</span></h2>
+      <pre><code class="language-bash" data-example="component-plan">jq -ce '
+  def changed($root):
+    any(.[]; startswith($root + "/")
+      or startswith(".github/")
+      or . == "global.json" or . == ".nvmrc");
+  {frontend: changed("frontend"),
+   backend: changed("backend")}
+' changed-paths.json &gt; plan.json</code></pre>
+      <p><code>jq</code> przetwarza JSON, nie wyszukuje przypadkowych fragmentów tekstu. Zmiana wspólnej konfiguracji uruchamia w tej regule oba komponenty.</p>
+      <pre><code class="language-json">{"frontend":true,"backend":false}</code></pre>
+      <p>To przykładowy wynik dla zmiany tylko w <code>frontend/</code>. Reguły muszą uwzględniać również rzeczywiste współdzielone zależności projektu.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="step-output-producent" data-title="GITHUB_OUTPUT — producent nazwanych wyników" data-section="dane">
+    <div class="content">
+      <div class="kicker">Fragment steps // plan.json już istnieje</div>
+      <h2>Producent publikuje <span class="accent">nazwane wartości</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">- name: Opublikuj plan
+  id: scan
+  shell: bash
+  run: |
+    for part in frontend backend; do
+      value=$(jq -r --arg p "$part" '.[$p]' plan.json)
+      printf '%s=%s\n' "$part" "$value" &gt;&gt; "$GITHUB_OUTPUT"
+    done
+    echo "plan-path=plan.json" &gt;&gt; "$GITHUB_OUTPUT"</code></pre>
+      <p><code>id: scan</code> pozwala odczytać np. <code>steps.scan.outputs.frontend</code>. Każda linia <code>nazwa=wartość</code> dodaje output kroku.</p>
+      <p>Wyniki <code>'true'</code> i <code>'false'</code> są tekstami. <code>plan-path</code> jest ścieżką — sam output nie kopiuje pliku.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="step-output-konsumenci" data-title="Ten sam output dla run i uses" data-section="dane">
+    <div class="content">
+      <div class="kicker">Konsumenci w tym samym jobie</div>
+      <h2>Run odbiera env. <span class="accent">Action odbiera with.</span></h2>
+      <div class="two">
+        <div><h3>Krok run</h3><pre><code class="language-yaml" data-embedded="github-actions">- name: Odczytaj decyzję
+  env:
+    FRONTEND: ${{ steps.scan.outputs.frontend }}
+  run: |
+    printf 'Frontend: %s\n' "$FRONTEND"</code></pre></div>
+        <div><h3>Krok uses</h3><pre><code class="language-yaml" data-embedded="github-actions">- uses: actions/upload-artifact@v7
+  with:
+    name: component-plan
+    path: ${{ steps.scan.outputs.plan-path }}
+    if-no-files-found: error</code></pre></div>
+      </div>
+      <p>Mapowanie jest jawne. Output nie tworzy automatycznie zmiennej Bash o tej samej nazwie.</p>
+      <p>Warunek wykonania może sprawdzić <code>steps.scan.outputs.frontend == 'true'</code>. Sam niepusty tekst <code>'false'</code> byłby truthy.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="job-output" data-title="Output joba i odczyt przez needs" data-section="dane">
+    <div class="content">
+      <div class="kicker">Publikujemy wynik poza job changes</div>
+      <h2>Step → job → <span class="accent">needs</span></h2>
+      <div class="two">
+        <div><h3>Dopisujemy do joba changes</h3><pre><code class="language-yaml" data-embedded="github-actions">outputs:
+  frontend: ${{ steps.scan.outputs.frontend }}
+  backend: ${{ steps.scan.outputs.backend }}</code></pre><p>To mapowanie wyników istniejącego kroku <code>scan</code>.</p></div>
+        <div><h3>Job odbierający plan</h3><pre><code class="language-yaml" data-embedded="github-actions">backend:
+  needs: changes
+  if: &gt;-
+    ${{ needs.changes.outputs.backend == 'true' }}
+  uses: ./.github/workflows/backend.yml
+  with:
+    configuration: Release</code></pre></div>
+      </div>
+      <p>Backend jest budowany tylko wtedy, gdy wymaga tego plan. <code>needs</code> udostępnia wyniki bezpośrednio wskazanych zależności, nie wszystkich jobs w workflow.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/pass-job-outputs">Passing job outputs</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="podsumowanie-komponentow" data-title="Podsumowanie decyzji i wyniku builda" data-section="dane">
+    <div class="content">
+      <div class="kicker">Job po wykrywaniu zmian i backendzie</div>
+      <h2>Decyzja planu ≠ <span class="accent">wynik wykonania</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">summary:
+  needs: [changes, backend]
+  if: ${{ always() }}
+  runs-on: ubuntu-24.04
+  steps:
+    - env:
+        NEEDED: ${{ needs.changes.outputs.backend }}
+        RESULT: ${{ needs.backend.result }}
+      run: |
+        printf 'Backend: potrzebny=%s, wynik=%s\n' \
+          "$NEEDED" "$RESULT" &gt;&gt; "$GITHUB_STEP_SUMMARY"</code></pre>
+      <p><code>true + success</code> oznacza wykonaną pracę. <code>false + skipped</code> oznacza świadome pominięcie. <code>true + failure</code> wymaga uwagi.</p>
+      <p>Summary opisuje te stany. Osobny required gate będzie później egzekwował, które połączenia akceptujemy.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="composite-output" data-title="Output composite action" data-section="dane">
+    <div class="content">
+      <div class="kicker">Te same kroki API i planowania grupujemy w action changes</div>
+      <h2>Composite wystawia <span class="accent">wynik wewnętrznego kroku</span></h2>
+      <div class="two">
+        <div><h3>Fragment action.yml</h3><pre><code class="language-yaml" data-embedded="github-actions">outputs:
+  frontend:
+    description: Czy budować frontend
+    value: ${{ steps.scan.outputs.frontend }}
+  backend:
+    description: Czy budować backend
+    value: ${{ steps.scan.outputs.backend }}</code></pre></div>
+        <div><h3>Caller po checkout</h3><pre><code class="language-yaml" data-embedded="github-actions">- id: changed
+  uses: ./.github/actions/changes
+- env:
+    FRONTEND: >-
+      ${{ steps.changed.outputs.frontend }}
+  run: printf '%s\n' "$FRONTEND"</code></pre></div>
+      </div>
+      <p>Wewnętrzny step <code>scan</code> pozostaje wewnątrz action. Caller zna swoje <code>id: changed</code> i publiczne nazwy outputów.</p>
+      <p>Przenosimy do composite poznaną procedurę, nie zmieniamy reguły wykrywania ani tekstowego kontraktu wyniku.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="reusable-output" data-title="Output reusable workflow" data-section="dane">
+    <div class="content">
+      <div class="kicker">Alternatywnie: procedura changes jako reusable workflow</div>
+      <h2>Reusable mapuje <span class="accent">job na wynik workflow</span></h2>
+      <div class="two">
+        <div><h3>Fragment on.workflow_call</h3><pre><code class="language-yaml" data-embedded="github-actions">on:
+  workflow_call:
+    outputs:
+      frontend:
+        description: Czy budować frontend
+        value: ${{ jobs.detect.outputs.frontend }}
+      backend:
+        description: Czy budować backend
+        value: ${{ jobs.detect.outputs.backend }}</code></pre></div>
+        <div><h3>Fragment joba detect</h3><pre><code class="language-yaml" data-embedded="github-actions">outputs:
+  frontend: ${{ steps.scan.outputs.frontend }}
+  backend: ${{ steps.scan.outputs.backend }}</code></pre><p>Job zawiera wcześniejsze kroki API, planowania i publikacji outputów.</p></div>
+      </div>
+      <p>Łańcuch to <strong>step → job → workflow</strong>. Kontekst <code>jobs</code> służy tutaj do wystawienia wyników reusable, nie do dowolnego odczytu w zwykłym callerze.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="caller-output-reusable" data-title="Caller odczytuje wynik reusable przez needs" data-section="dane">
+    <div class="content">
+      <div class="kicker">Fragment jobs callera Component CI</div>
+      <h2>Caller czyta wynik <span class="accent">pod własnym job ID</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">changes:
+  uses: ./.github/workflows/changes.yml
+backend:
+  needs: changes
+  if: ${{ needs.changes.outputs.backend == 'true' }}
+  uses: ./.github/workflows/backend.yml
+  with:
+    configuration: Release</code></pre>
+      <p>Caller nie zna wewnętrznego joba <code>detect</code> ani kroku <code>scan</code>. Zna interfejs wywołania <code>changes</code>.</p>
+      <p>Gdy output ma zasilić typowany input boolean, konwertujemy tekst przez <code>fromJSON(...)</code>. Samo odczytanie outputu nie przywraca typu.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="pliki-i-artefakty" data-title="Plik między jobs wymaga upload i download" data-section="dane">
+    <div class="content">
+      <div class="kicker">Ścieżka w output nie jest zawartością pliku</div>
+      <h2>Artefakt przenosi <span class="accent">rzeczywisty plik</span></h2>
+      <div class="two">
+        <div><h3>Producent planu</h3><pre><code class="language-yaml" data-embedded="github-actions">- uses: actions/upload-artifact@v7
+  with:
+    name: component-plan
+    path: plan.json
+    if-no-files-found: error</code></pre></div>
+        <div><h3>Inny job, po needs: changes</h3><pre><code class="language-yaml" data-embedded="github-actions">- uses: actions/download-artifact@v8
+  with:
+    name: component-plan
+    path: metadata
+- run: jq . metadata/plan.json</code></pre></div>
+      </div>
+      <p>Upload wiąże pliki z run. Download udostępnia je na innym runnerze. Ten sam mechanizm przenosi raporty testów, gotowy build albo PDF.</p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-component-artifact" data-title="Artefakt — plan przypisany do run" data-section="dane">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Artifacts: <span class="accent">component-plan</span></h2>
+      <figure class="screenshot" data-screenshot="component-artifact" data-screenshot-source="browser" data-screenshot-caption="Sekcja Artifacts konkretnego uruchomienia z artefaktem component-plan do pobrania.">
+        <a class="screenshot-link" href="screenshots/component-artifact.png" target="_blank" rel="noopener" aria-label="Otwórz artefakt planu komponentów w pełnym rozmiarze">
+          <img src="screenshots/component-artifact.png" alt="Sekcja Artifacts w GitHub Actions z artefaktem component-plan przypisanym do uruchomienia." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Plik plan.json jest przenoszony jako artefakt, nie jako tekst ścieżki w output.</span><a href="screenshots/component-artifact.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="workflow-run-tozsamosc" data-title="Workflow run — niezależny konsument artefaktu" data-section="dane">
+    <div class="content">
+      <div class="kicker">To nie jest kolejne wywołanie workflow_call</div>
+      <h2>Nowy workflow ma <span class="accent">własne uruchomienie</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">on:
+  workflow_run:
+    workflows: ['Component CI']
+    types: [completed]
+permissions: {actions: read}</code></pre>
+      <table class="comparison">
+        <thead><tr><th>Odczyt</th><th>Tożsamość</th></tr></thead>
+        <tbody>
+          <tr><td><code>github.run_id</code></td><td>Bieżący run konsumenta.</td></tr>
+          <tr><td><code>github.event.workflow_run.id</code></td><td>Run producenta, którego zakończenie wywołało zdarzenie.</td></tr>
+          <tr><td><code>github.event.workflow_run.head_sha</code></td><td>Rewizja związana z wykonaniem producenta.</td></tr>
+        </tbody>
+      </table>
+      <p>Konsument nie otrzymuje <code>needs</code> poprzedniego run. Jego definicja musi istnieć na gałęzi domyślnej.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="workflow-run-download" data-title="Pobieranie artefaktu właściwego producenta" data-section="dane">
+    <div class="content">
+      <div class="kicker">Fragment jobs nowego workflow // tylko odczyt danych</div>
+      <h2>Wybierz run producenta, <span class="accent">nie „ostatni plik”</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">read:
+  if: &gt;-
+    ${{ github.event.workflow_run.conclusion == 'success'
+        &amp;&amp; github.event.workflow_run.head_repository.full_name
+            == github.repository }}
+  runs-on: ubuntu-24.04
+  steps:
+    - uses: actions/download-artifact@v8
+      with:
+        name: component-plan
+        run-id: ${{ github.event.workflow_run.id }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path: metadata
+    - run: jq . metadata/plan.json</code></pre>
+      <p>Pobieramy plan z run producenta. Token ma tylko <code>actions: read</code>.</p>
+      <p class="danger">Artefakt to dane, nie kod. Nie wykonuj go z większymi uprawnieniami konsumenta.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run">workflow_run — kontekst i bezpieczeństwo</a></p>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-matrix" data-title="Matrix — warianty zadania" data-section="matrix" data-section-start data-section-title="Matrix">
+    <div class="content">
+      <div class="kicker">12 // Jeden szablon, wiele wykonań</div>
+      <h2>Powiel konfigurację, <span class="accent">nie listę kroków</span></h2>
+      <p class="lead">Matrix opisuje warianty joba: systemy, wersje narzędzia albo komponenty z wcześniejszego planu.</p>
+      <div class="section-topics"><span>Iloczyn wariantów</span><span>Include i exclude</span><span>Dynamiczna lista</span></div>
+    </div>
+  </section>
+
+  <section class="slide" id="matrix-podstawy" data-title="Matrix — dwie osie i cztery wykonania" data-section="matrix">
+    <div class="content">
+      <div class="kicker">Fragment joba</div>
+      <h2>Dwa systemy × dwie wersje = <span class="accent">cztery jobs</span></h2>
+      <div class="code-and-notes">
+        <pre><code class="language-yaml" data-embedded="github-actions">runs-on: ${{ matrix.os }}
+strategy:
+  matrix:
+    os: [ubuntu-24.04, windows-latest]
+    node: ['24', '26']
+steps:
+  - uses: actions/setup-node@v7
+    with:
+      node-version: ${{ matrix.node }}
+      package-manager-cache: false
+  - run: node --version</code></pre>
+        <ul>
+          <li>Każda kombinacja jest osobnym wykonaniem joba na własnym runnerze.</li>
+          <li><code>matrix.os</code> i <code>matrix.node</code> opisują bieżący wariant.</li>
+          <li>Matrix nie instaluje Node. Robi to setup action.</li>
+          <li>Wybieramy tylko warianty, które rzeczywiście wspiera sprawdzany projekt.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-matrix-graph" data-title="Matrix — cztery warianty w Actions" data-section="matrix">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Matrix: <span class="accent">cztery wykonania</span></h2>
+      <figure class="screenshot" data-screenshot="matrix-graph" data-screenshot-source="browser" data-screenshot-caption="Cztery warianty joba: Ubuntu 24.04/Windows i Node 24/26, z nazwami i statusami.">
+        <a class="screenshot-link" href="screenshots/matrix-graph.png" target="_blank" rel="noopener" aria-label="Otwórz warianty matrix w pełnym rozmiarze">
+          <img src="screenshots/matrix-graph.png" alt="GitHub Actions pokazujące cztery warianty matrix dla Ubuntu i Windows oraz Node 24 i 26." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Każda kombinacja systemu i wersji Node ma własne wykonanie i wynik.</span><a href="screenshots/matrix-graph.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="matrix-include-exclude" data-title="Matrix — include i exclude" data-section="matrix">
+    <div class="content">
+      <div class="kicker">Precyzyjny zestaw kombinacji</div>
+      <h2>Usuń wyjątek. <span class="accent">Dodaj wariant.</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">strategy:
+  matrix:
+    os: [ubuntu-24.04, windows-latest]
+    node: ['24', '26']
+    exclude:
+      - os: windows-latest
+        node: '26'
+    include:
+      - os: macos-latest
+        node: '24'</code></pre>
+        <div>
+          <p>Początkowo mamy 4 kombinacje.</p>
+          <p><code>exclude</code> usuwa Windows + Node 26: zostają 3.</p>
+          <p><code>include</code> dodaje macOS + Node 24: znowu mamy 4.</p>
+          <p>Include może także uzupełniać istniejące kombinacje o dodatkowe pola, jeśli nie nadpisuje ich pierwotnych wartości.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="matrix-sterowanie" data-title="Matrix — fail-fast i max-parallel" data-section="matrix">
+    <div class="content">
+      <div class="kicker">Liczba wariantów ≠ liczba jednoczesnych wykonań</div>
+      <h2>Koszt i reakcję na błąd <span class="accent">ustawiamy osobno</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">strategy:
+  fail-fast: false
+  max-parallel: 2
+  matrix:
+    node: ['22', '24', '26']</code></pre>
+      <div class="two">
+        <div class="panel"><h3>fail-fast</h3><p>Domyślnie błąd wariantu może anulować inne warianty matrix. <code>false</code> pozwala zebrać ich wyniki niezależnie.</p></div>
+        <div class="panel"><h3>max-parallel</h3><p>Ogranicza równoległość do dwóch wykonań. Nadal istnieją trzy warianty; jeden poczeka.</p></div>
+      </div>
+      <p><code>continue-on-error</code> ma inną rolę: zmienia traktowanie niepowodzenia. Nie włączamy go zamiast naprawy wymaganych testów.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="matrix-producent" data-title="Plan komponentów jako output JSON" data-section="matrix">
+    <div class="content">
+      <div class="kicker">Rozszerzamy krok scan z plan.json</div>
+      <h2>Plan dostarcza <span class="accent">listę wariantów</span></h2>
+      <pre><code class="language-bash">components=$(jq -c \
+  'to_entries | map(select(.value == true) | .key)' plan.json)
+printf 'components=%s\n' "$components" &gt;&gt; "$GITHUB_OUTPUT"</code></pre>
+      <pre><code class="language-yaml" data-embedded="github-actions"># Dodaj do outputs joba changes
+outputs:
+  components: ${{ steps.scan.outputs.components }}</code></pre>
+      <p>Dla obu zmienionych komponentów output zawiera tekst <code>["frontend","backend"]</code>. Dla samej dokumentacji będzie to <code>[]</code>.</p>
+      <p>To wciąż ten sam plan, a nie druga, niezależna reguła wykrywania zmian.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="matrix-fromjson" data-title="Dynamiczna matrix z outputu poprzedniego joba" data-section="matrix">
+    <div class="content">
+      <div class="kicker">Fragment jobs // job changes już publikuje components</div>
+      <h2><code>fromJSON</code> zamienia output <span class="accent">w matrix</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">selected:
+  needs: changes
+  if: ${{ needs.changes.outputs.components != '[]' }}
+  runs-on: ubuntu-24.04
+  strategy:
+    matrix:
+      component: ${{ fromJSON(needs.changes.outputs.components) }}
+  steps:
+    - env:
+        COMPONENT: ${{ matrix.component }}
+      run: |
+        printf 'Wybrany komponent: %s\n' "$COMPONENT"</code></pre>
+      <p>Job-level if jest oceniane przed matrix. Pusta lista świadomie pomija job; brak lub niepoprawny JSON powinien ujawnić błąd producenta, nie wybrać „wszystko” albo „nic” po cichu.</p>
+      <p>Wariant może następnie wywołać właściwą procedurę builda. Matrix nie zastępuje przygotowania jej narzędzi.</p>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-build" data-title="Powtarzalne buildy i cache" data-section="build" data-section-start data-section-title="Powtarzalne buildy i cache">
+    <div class="content">
+      <div class="kicker">13 // Powtarzalność i koszt</div>
+      <h2>Najpierw odtwarzalność. <span class="accent">Potem przyspieszenie.</span></h2>
+      <p class="lead">Manifest, lockfile, SDK i cache rozwiązują różne problemy.</p>
+      <div class="section-topics"><span>Wersje wejść</span><span>Cache zależności</span><span>Artefakty wyniku</span></div>
+    </div>
+  </section>
+
+  <section class="slide" id="manifest-lockfile" data-title="Manifest a lockfile — przykłady JSON" data-section="build">
+    <div class="content">
+      <div class="kicker">Fragmenty package.json i package-lock.json</div>
+      <h2>Deklaracja ≠ <span class="accent">rozwiązany zestaw zależności</span></h2>
+      <div class="two">
+        <div><h3>Manifest — dopuszczalna wersja</h3><pre><code class="language-json">{
+  "dependencies": {
+    "is-number": "^7.0.0"
+  }
+}</code></pre></div>
+        <div><h3>Lockfile — konkretny pakiet</h3><pre><code class="language-json">{
+  "packages": {
+    "node_modules/is-number": {
+      "version": "7.0.0"
+    }
+  }
+}</code></pre></div>
+      </div>
+      <p>To wycinki. Pełny lockfile zapisuje także graf zależności przechodnich i dane potrzebne do odtworzenia pobrań, np. integralność pakietów.</p>
+      <p>Manifest i lockfile aktualizujemy świadomie razem. CI ma odtwarzać ustalony zestaw, a nie samoczynnie „naprawiać” jego wersje.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="sdk-konfiguracja" data-title="Wersje SDK i narzędzi są wejściem builda" data-section="build">
+    <div class="content">
+      <div class="kicker">Źródło prawdy należy do projektu</div>
+      <h2>Lockfile nie przypina <span class="accent">SDK</span></h2>
+      <div class="two">
+        <div><h3>global.json</h3><pre><code class="language-json">{
+  "sdk": {
+    "version": "10.0.401",
+    "rollForward": "disable"
+  }
+}</code></pre><p>Przykład dokładnego wyboru .NET SDK.</p></div>
+        <div><h3>Setup czyta plik z repozytorium</h3><pre><code class="language-yaml" data-embedded="github-actions">- uses: actions/setup-dotnet@v6
+  with:
+    global-json-file: global.json
+- uses: actions/setup-node@v7
+  with:
+    node-version-file: .nvmrc
+    package-manager-cache: false</code></pre></div>
+      </div>
+      <p>Najpierw checkout. Wcześniejsze <code>10.x</code> było prostym przykładem wyboru rodziny SDK; powtarzalny projekt potrzebuje świadomej polityki dokładnych wersji i aktualizacji.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="powtarzalny-build" data-title="Co musi określać powtarzalny build" data-section="build">
+    <div class="content">
+      <div class="kicker">Zestaw jawnych wejść</div>
+      <h2>Ten sam commit <span class="accent">to dopiero początek</span></h2>
+      <ul>
+        <li>Określ wersje narzędzi, zależności i konfigurację builda.</li>
+        <li>Wymagaj zgodności manifestu z lockfile; używaj trybu instalacji respektującego blokadę.</li>
+        <li>Kontroluj dodatkowe wejścia: dane testowe, zmienne i usługi zewnętrzne.</li>
+        <li>Utrzymuj możliwość zbudowania projektu bez cache i bez stanu poprzedniego runnera.</li>
+        <li>Powtarzalne wykonanie testów nie gwarantuje jeszcze identycznych bajtów artefaktu — np. timestamp też może być wejściem.</li>
+      </ul>
+      <p>Cache optymalizuje koszt odtworzenia tych wejść. Nie określa, które wersje powinny zostać użyte.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="cache-a-artefakt" data-title="Cache a artefakt — różne kontrakty" data-section="build">
+    <div class="content">
+      <div class="kicker">Optymalizacja ≠ wynik</div>
+      <h2>Cache można stracić. <span class="accent">Wynik trzeba przekazać.</span></h2>
+      <div class="two">
+        <div class="panel"><h3>Cache zależności</h3><p>Odtwarzalny zapas pobrań, np. magazyn npm lub pakiety NuGet. Klucz i zakres określają dostęp do wpisu.</p><p>Może wygasnąć albo nie istnieć. Build nadal powinien działać.</p></div>
+        <div class="panel"><h3>Artefakt workflow</h3><p>Wynik konkretnego run: raport, PDF, paczka builda. Ma odbiorcę, nazwę i retencję.</p><p>Gdy inny job potrzebuje pliku wynikowego, używamy upload/download.</p></div>
+      </div>
+      <p>Odzyskanie cache nie zastępuje instalacji, kompilacji ani testów. Nie przechowujemy w nim sekretów.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="cache-key" data-title="Cache — key i restore-keys" data-section="build">
+    <div class="content">
+      <div class="kicker">Przykład magazynu pobrań npm, po checkout</div>
+      <h2>Klucz opisuje <span class="accent">zgodność danych</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">- id: packages
+  uses: actions/cache@v6
+  env:
+    PREFIX: ${{ runner.os }}-${{ runner.arch }}-npm-v1
+  with:
+    path: ~/.npm
+    key: ${{ env.PREFIX }}-${{ hashFiles('package-lock.json') }}
+    restore-keys: ${{ env.PREFIX }}-</code></pre>
+      <ul>
+        <li><code>key</code>: system, architektura, rodzaj danych i hash zależności.</li>
+        <li><code>restore-keys</code>: zgodny prefiks zapasowy, gdy dokładnego wpisu nie ma.</li>
+        <li>Wpis cache nie jest aktualizowany w miejscu. Inne dane wymagają nowego klucza.</li>
+      </ul>
+      <p>Tu cache zawiera pobrania npm, nie <code>node_modules</code>. Dla binariów zgodność może wymagać również wersji runtime, ABI i innych wejść builda.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="cache-hit-miss" data-title="Cache — exact hit, fallback i miss" data-section="build">
+    <div class="content">
+      <div class="kicker">Odzyskaj → zainstaluj → zbuduj i sprawdź</div>
+      <h2>Hit zmienia koszt, <span class="accent">nie kryteria sukcesu</span></h2>
+      <table class="comparison">
+        <thead><tr><th>Output cache-hit</th><th>Znaczenie</th><th>Następna czynność</th></tr></thead>
+        <tbody>
+          <tr><td><code>'true'</code></td><td>Odzyskano dokładny key.</td><td>Instalacja według lockfile, build i testy.</td></tr>
+          <tr><td><code>'false'</code></td><td>Odzyskano wpis przez dopasowanie zapasowe.</td><td>Uzupełnienie zależności, build i testy.</td></tr>
+          <tr><td><code>''</code></td><td>Nie odzyskano wpisu.</td><td>Pełne pobranie, build i testy.</td></tr>
+        </tbody>
+      </table>
+      <p>Standardowa action cache zapisuje nowy wpis w fazie post-job po sukcesie, gdy nie było exact hit i zapis jest dozwolony.</p>
+      <p class="source-links"><a href="https://github.com/actions/cache/tree/v6.1.0#outputs">actions/cache — output cache-hit</a></p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-cache-hit" data-title="Cache hit — instalacja nadal działa" data-section="build">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Cache hit: <span class="accent">odzyskaj i zainstaluj</span></h2>
+      <figure class="screenshot" data-screenshot="cache-hit" data-screenshot-source="browser" data-screenshot-caption="Log actions/cache z odzyskanym wpisem i wykonanym krokiem instalacji zależności.">
+        <a class="screenshot-link" href="screenshots/cache-hit.png" target="_blank" rel="noopener" aria-label="Otwórz log cache i instalacji w pełnym rozmiarze">
+          <img src="screenshots/cache-hit.png" alt="Log GitHub Actions z komunikatem przywrócenia cache i następującą po nim instalacją zależności." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Odzyskanie cache nie pomija instalacji według lockfile ani sprawdzania wyniku.</span><a href="screenshots/cache-hit.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="setup-cache" data-title="Cache obsługiwany przez setup actions" data-section="build">
+    <div class="content">
+      <div class="kicker">Jedna odpowiedzialność za dany magazyn</div>
+      <h2>Setup action może <span class="accent">obsłużyć cache zależności</span></h2>
+      <div class="two">
+        <div><h3>npm</h3><pre><code class="language-yaml" data-embedded="github-actions">- uses: actions/setup-node@v7
+  with:
+    node-version-file: .nvmrc
+    cache: npm
+    cache-dependency-path: package-lock.json
+- run: npm ci</code></pre></div>
+        <div><h3>NuGet</h3><pre><code class="language-yaml" data-embedded="github-actions">- uses: actions/setup-dotnet@v6
+  with:
+    global-json-file: global.json
+    cache: true
+    cache-dependency-path: '**/packages.lock.json'</code></pre></div>
+      </div>
+      <p>W obu przypadkach wymagane są odpowiednie lockfiles. Setup cache nie jest poleceniem odtworzenia zależności aplikacji.</p>
+      <p>Wybierz setup action albo osobne actions/cache dla tego samego katalogu. Nie dodawaj dwóch konkurujących mechanizmów bez potrzeby.</p>
+      <p class="source-links"><a href="https://github.com/actions/setup-node/tree/v7.1.0#caching-global-packages-data">setup-node — cache</a> · <a href="https://github.com/actions/setup-dotnet/tree/v6.0.0#caching-nuget-packages">setup-dotnet — cache</a></p>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-checks" data-title="Checks i reguły merge" data-section="checks" data-section-start data-section-title="Checks i reguły merge">
+    <div class="content">
+      <div class="kicker">14 // Od informacji do reguły</div>
+      <h2>Kiedy wynik <span class="accent">pozwala scalić PR?</span></h2>
+      <p class="lead">Wynik wykonania i reguła dopuszczająca merge to dwa osobne mechanizmy.</p>
+      <div class="section-topics"><span>Status i conclusion</span><span>Ruleset</span><span>Warunkowa praca, stały gate</span></div>
+    </div>
+  </section>
+
+  <section class="slide" id="status-a-check-run" data-title="Commit status a check run" data-section="checks">
+    <div class="content">
+      <div class="kicker">Dwa interfejsy publikowania wyniku dla commita</div>
+      <h2>Status i check run <span class="accent">to różne modele</span></h2>
+      <div class="two">
+        <div class="panel"><h3>Commit status</h3><p>Nazwany <code>context</code> oraz stan:</p><p><code>pending</code>, <code>success</code>, <code>failure</code>, <code>error</code>.</p><p>Typowy dla integracji przez Status API.</p></div>
+        <div class="panel"><h3>Check run</h3><p><code>status</code> opisuje przebieg: queued → in_progress → completed.</p><p><code>conclusion</code> opisuje wynik, np. success, failure, cancelled, timed_out, neutral lub skipped.</p></div>
+      </div>
+      <p>Actions wystawia checks dla jobs, nie osobny check dla każdego kroku. Nazwa wyniku i SHA są ważniejsze niż sam zielony kolor.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/pull-requests/reference/status-checks">GitHub — status checks</a></p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-status-check-types" data-title="Status i check run — wyniki w PR" data-section="checks">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Jeden commit: <span class="accent">nazwane wyniki</span></h2>
+      <figure class="screenshot" data-screenshot="status-check-types" data-screenshot-source="browser" data-screenshot-caption="Rozwinięta lista wyników przy zdarzeniu scalenia PR-a: commit status i check run dla tej samej rewizji.">
+        <a class="screenshot-link" href="screenshots/status-check-types.png" target="_blank" rel="noopener" aria-label="Otwórz wyniki status i check run w pełnym rozmiarze">
+          <img src="screenshots/status-check-types.png" alt="Rozwinięta lista statusów przy zdarzeniu scalenia PR-a, pokazująca commit status i check run." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Lista przy zdarzeniu scalenia PR-a pokazuje status z API obok check run.</span><a href="screenshots/status-check-types.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="ruleset" data-title="Ruleset wymaga konkretnych checks" data-section="checks">
+    <div class="content">
+      <div class="kicker">Ochrona gałęzi docelowej</div>
+      <h2>Reguła wybiera <span class="accent">wymagany wynik</span></h2>
+      <ul>
+        <li>Ruleset może wymagać PR-a, review i określonych checks.</li>
+        <li>Wybieramy rzeczywistą nazwę checka i, jeśli potrzeba, aplikację źródłową.</li>
+        <li>Nowy commit wymaga wyniku dla właściwego SHA. Tryb strict wymaga również aktualności względem bazy.</li>
+        <li>Zmiana nazwy joba może wymagać zmiany reguły. Testujemy ochronę kontem bez uprawnienia bypass.</li>
+      </ul>
+      <p><code>neutral</code> i <code>skipped</code> mogą spełnić wymagany check. Brak całego workflow po filtrze może pozostawić Expected / Pending — to inna sytuacja niż pominięty job.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets">Rulesets</a></p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-ruleset-required" data-title="Ruleset — wymagany check dla main" data-section="checks">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Ruleset: <span class="accent">wymagany Required CI</span></h2>
+      <figure class="screenshot" data-screenshot="ruleset-required" data-screenshot-source="browser" data-screenshot-caption="Ruleset dla main: wymagany check Required CI ze źródła GitHub Actions; widok tylko do odczytu.">
+        <a class="screenshot-link" href="screenshots/ruleset-required.png" target="_blank" rel="noopener" aria-label="Otwórz konfigurację wymaganego checka w pełnym rozmiarze">
+          <img src="screenshots/ruleset-required.png" alt="Widok rulesetu dla main tylko do odczytu: wymagany check Required CI ze źródła GitHub Actions." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Reguła wskazuje nazwę wymaganego wyniku i jego aplikację źródłową.</span><a href="screenshots/ruleset-required.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="paths-front-back" data-title="Paths — osobne filtry frontendu i backendu" data-section="checks">
+    <div class="content">
+      <div class="kicker">Dwa warianty triggera pull_request</div>
+      <h2>Zmiany mogą uruchomić <span class="accent">zero, jeden lub dwa workflows</span></h2>
+      <div class="two">
+        <div><h3>frontend-ci.yml</h3><pre><code class="language-yaml" data-embedded="github-actions">on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.nvmrc'
+      - '.github/**'</code></pre></div>
+        <div><h3>backend-ci.yml</h3><pre><code class="language-yaml" data-embedded="github-actions">on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'global.json'
+      - '.github/**'</code></pre></div>
+      </div>
+      <p><code>branches</code> i <code>paths</code> muszą być spełnione jednocześnie. Zmiana wspólnej konfiguracji może uruchomić oba CI; zmiana samej dokumentacji — żadnego.</p>
+      <p>Filtr jest decyzją o tym, czy powstanie run. Trzeba ją uzgodnić z polityką wymaganych checks.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="wspolny-required" data-title="Wspólna nazwa required — obserwacje z GitHuba" data-section="checks">
+    <div class="content">
+      <div class="kicker">Studium przypadku // dwa workflows z filtrami paths</div>
+      <h2>Dwa workflows, <span class="accent">jedna wymagana nazwa</span></h2>
+      <div class="two">
+        <div><h3>Frontend</h3><pre><code class="language-yaml" data-embedded="github-actions">jobs:
+  required:
+    name: required
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "Frontend"</code></pre></div>
+        <div><h3>Backend</h3><pre><code class="language-yaml" data-embedded="github-actions">jobs:
+  required:
+    name: required
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "Backend"</code></pre></div>
+      </div>
+      <p>Ruleset wybiera <strong>nazwę checka</strong>. Tutaj ustala ją <code>name: required</code>, nie samo id joba.</p>
+      <p class="small" data-empirical-result>W badanej konfiguracji przeszły warianty z jednym sukcesem albo dwoma sukcesami. Wspólna nazwa nie oznaczała „dowolny zielony wystarczy”, gdy drugi check nadal trwał lub zakończył się błędem.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="required-zero-jeden" data-title="Wspólne required — zero i jeden run" data-section="checks">
+    <div class="content">
+      <div class="kicker">Pomiar GitHub // 17.10.2026</div>
+      <h2>Jeden udany run <span class="accent">może wystarczyć</span></h2>
+      <table class="comparison">
+        <thead><tr><th>Zmiana</th><th>Kadr do porównania</th><th>Wynik / obserwacja</th></tr></thead>
+        <tbody>
+          <tr><td>Tylko dokumentacja</td><td>0 uruchomień</td><td><strong class="danger">BLOCKED</strong> — brak wymaganego wyniku.</td></tr>
+          <tr><td>Tylko frontend</td><td>1 run w trakcie pracy</td><td>Stan checka i dostępność merge przed zakończeniem.</td></tr>
+          <tr><td>Ten sam PR</td><td>1 run zakończony sukcesem</td><td><strong class="accent">CLEAN</strong> — drugi workflow nie musiał się uruchomić.</td></tr>
+        </tbody>
+      </table>
+      <p>Brak uruchomienia nie tworzy zielonego wyniku. Żeby uniknąć tej pułapki, można zapewnić zawsze obecny, lekki gate.</p>
+      <p class="small" data-empirical-result>Końcowe wyniki potwierdzono aktywnym rulesetem: nazwa required, źródło GitHub Actions, brak bypass także dla administratorów. Klasyczna ochrona gałęzi była wyłączona.</p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-required-0-pending" data-title="Required — zero uruchomień, merge zablokowany" data-section="checks">
+    <div class="content">
+      <div class="kicker">GitHub · pomiar z aktywnym rulesetem</div>
+      <h2>Zero runów: <span class="accent">brak wymaganego wyniku</span></h2>
+      <figure class="screenshot" data-screenshot="required-0-pending" data-screenshot-source="browser" data-observed-merge-state="BLOCKED" data-observed-policy="ruleset" data-screenshot-caption="PR tylko z dokumentacją: filtrowane workflows nie wystartowały. Brak wymaganego wyniku, aktywny ruleset blokuje merge — BLOCKED.">
+        <a class="screenshot-link" href="screenshots/required-0-pending.png" target="_blank" rel="noopener" aria-label="Otwórz blokadę merge bez uruchomień w pełnym rozmiarze">
+          <img src="screenshots/required-0-pending.png" alt="PR tylko z dokumentacją: brak wymaganego checka i blokada scalania przez aktywny ruleset." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>0 uruchomień → BLOCKED. Filtr paths nie tworzy zielonego wyniku.</span><a href="screenshots/required-0-pending.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-required-1-pending" data-title="Required — jeden run w trakcie pracy" data-section="checks">
+    <div class="content">
+      <div class="kicker">GitHub · pomiar z aktywnym rulesetem</div>
+      <h2>Jeden run: <span class="accent">jeszcze trwa</span></h2>
+      <figure class="screenshot" data-screenshot="required-1-pending" data-screenshot-source="browser" data-observed-merge-state="BLOCKED" data-observed-policy="ruleset" data-screenshot-caption="PR zmieniający tylko frontend: jeden check required IN_PROGRESS, drugi workflow nieuruchomiony. Aktywny ruleset bez bypass blokuje merge — BLOCKED.">
+        <a class="screenshot-link" href="screenshots/required-1-pending.png" target="_blank" rel="noopener" aria-label="Otwórz PR z jednym trwającym checkiem w pełnym rozmiarze">
+          <img src="screenshots/required-1-pending.png" alt="PR ze zmianą frontendu: jeden check required IN_PROGRESS i merge zablokowany przez aktywny ruleset." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>1 check IN_PROGRESS → BLOCKED. Aktywny ruleset nie dopuszcza jeszcze merge.</span><a href="screenshots/required-1-pending.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-required-1-done" data-title="Required — jeden sukces, merge dostępny" data-section="checks">
+    <div class="content">
+      <div class="kicker">GitHub · pomiar z aktywnym rulesetem</div>
+      <h2>Jeden sukces: <span class="accent">CLEAN</span></h2>
+      <figure class="screenshot" data-screenshot="required-1-done" data-screenshot-source="browser" data-observed-merge-state="CLEAN" data-observed-policy="ruleset" data-screenshot-caption="Po sukcesie jedynego uruchomionego workflow aktywny ruleset dopuszcza merge — CLEAN; drugi workflow nie wystartował.">
+        <a class="screenshot-link" href="screenshots/required-1-done.png" target="_blank" rel="noopener" aria-label="Otwórz dostępny merge po jednym sukcesie w pełnym rozmiarze">
+          <img src="screenshots/required-1-done.png" alt="PR z jednym zakończonym sukcesem checkiem required i dostępnym scalaniem pod aktywnym rulesetem." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>1 udany run → CLEAN w badanej konfiguracji, bez bypass.</span><a href="screenshots/required-1-done.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="required-dwa" data-title="Wspólne required — dwa równoczesne runs" data-section="checks">
+    <div class="content">
+      <div class="kicker">Ten sam PR i SHA // pomiar GitHub 17.10.2026</div>
+      <h2>Dwa uruchomienia: <span class="accent">czekamy na oba wyniki</span></h2>
+      <table class="comparison">
+        <thead><tr><th>Moment</th><th>Wynik / obserwacja</th></tr></thead>
+        <tbody>
+          <tr><td>Jeden sukces, drugi IN_PROGRESS</td><td><strong class="danger">BLOCKED</strong> — pojedynczy sukces nie zakończył oczekiwania.</td></tr>
+          <tr><td>Oba zakończone sukcesem</td><td><strong class="accent">CLEAN</strong> — oba uruchomione checks zakończyły się sukcesem.</td></tr>
+          <tr><td>Jeden sukces, drugi błąd</td><td><strong class="danger">BLOCKED</strong> — wspólna nazwa nie ukryła niepowodzenia.</td></tr>
+        </tbody>
+      </table>
+      <p class="small" data-empirical-result>Wyniki końcowe potwierdzono także aktywnym rulesetem. To obserwacja, nie gwarancja API dla dowolnej konfiguracji: znaczenie mają filtry, nazwa, źródło checka i SHA.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches">GitHub zaleca unikalne nazwy jobs między workflows</a></p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-required-2-pending" data-title="Required — dwa runy, drugi nadal trwa" data-section="checks">
+    <div class="content">
+      <div class="kicker">GitHub · pomiar z aktywnym rulesetem</div>
+      <h2>Dwa runy: <span class="accent">jeden sukces nie wystarcza</span></h2>
+      <figure class="screenshot" data-screenshot="required-2-pending" data-screenshot-source="browser" data-observed-merge-state="BLOCKED" data-observed-policy="ruleset" data-screenshot-caption="PR zmieniający frontend i backend: jeden check required zakończony sukcesem, drugi IN_PROGRESS. Aktywny ruleset blokuje merge — BLOCKED.">
+        <a class="screenshot-link" href="screenshots/required-2-pending.png" target="_blank" rel="noopener" aria-label="Otwórz blokadę merge podczas drugiego runa w pełnym rozmiarze">
+          <img src="screenshots/required-2-pending.png" alt="Dwa checki required: pierwszy success, drugi IN_PROGRESS; merge zablokowany przez aktywny ruleset." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>success + IN_PROGRESS → BLOCKED. Drugi uruchomiony check nadal ma znaczenie.</span><a href="screenshots/required-2-pending.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-required-2-done" data-title="Required — dwa sukcesy, merge dostępny" data-section="checks">
+    <div class="content">
+      <div class="kicker">GitHub · pomiar z aktywnym rulesetem</div>
+      <h2>Dwa sukcesy: <span class="accent">CLEAN</span></h2>
+      <figure class="screenshot" data-screenshot="required-2-done" data-screenshot-source="browser" data-observed-merge-state="CLEAN" data-observed-policy="ruleset" data-screenshot-caption="Oba workflows zakończone sukcesem: aktywny ruleset dopuszcza merge — CLEAN, bez bypass i bez klasycznej ochrony gałęzi.">
+        <a class="screenshot-link" href="screenshots/required-2-done.png" target="_blank" rel="noopener" aria-label="Otwórz dostępny merge po dwóch sukcesach w pełnym rozmiarze">
+          <img src="screenshots/required-2-done.png" alt="PR z dwoma zakończonymi sukcesem checkami required i dostępnym scalaniem pod aktywnym rulesetem." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>success + success → CLEAN. Oba uruchomione checks zakończyły się sukcesem.</span><a href="screenshots/required-2-done.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-required-2-failure" data-title="Required — błąd drugiego checka blokuje merge" data-section="checks">
+    <div class="content">
+      <div class="kicker">GitHub · pomiar z aktywnym rulesetem</div>
+      <h2>Sukces i błąd: <span class="accent">BLOCKED</span></h2>
+      <figure class="screenshot" data-screenshot="required-2-failure" data-screenshot-source="browser" data-observed-merge-state="BLOCKED" data-observed-policy="ruleset" data-screenshot-caption="Dwa workflows z nazwą required: jeden success, drugi failure. Aktywny ruleset blokuje merge — BLOCKED, bez bypass.">
+        <a class="screenshot-link" href="screenshots/required-2-failure.png" target="_blank" rel="noopener" aria-label="Otwórz blokadę merge po błędzie checka w pełnym rozmiarze">
+          <img src="screenshots/required-2-failure.png" alt="Dwa checki required: success i failure oraz blokada scalania PR-a przez aktywny ruleset." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>success + failure → BLOCKED. Wspólna nazwa nie ukryła niepowodzenia.</span><a href="screenshots/required-2-failure.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="staly-required-gate" data-title="Stały i jednoznaczny Required CI" data-section="checks">
+    <div class="content">
+      <div class="kicker">Wariant kanoniczny</div>
+      <h2>Opcjonalna praca. <span class="accent">Jeden stały gate.</span></h2>
+      <div class="flow flow-line"><div class="node">Każdy PR</div><div class="arrow">→</div><div class="node">changes</div><div class="arrow">→</div><div class="node">frontend / backend<br><small>według planu</small></div><div class="arrow">→</div><div class="node accent-border">Required CI</div></div>
+      <ul>
+        <li>Workflow nie ma filtra paths na poziomie <code>on</code>; powstaje dla każdego PR-a.</li>
+        <li>Poznana procedura changes publikuje plan. Poszczególne jobs korzystają z <code>if</code>.</li>
+        <li>Jeden unikalny check <strong>Required CI</strong> sprawdza sukces planowania i wyniki potrzebnych komponentów.</li>
+        <li>Ruleset wymaga gate, a nie nazw warunkowo pomijanych workflow.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-required-gate-graph" data-title="Required CI — jeden końcowy gate" data-section="checks">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Graf: <span class="accent">plan, komponenty i gate</span></h2>
+      <figure class="screenshot" data-screenshot="required-gate-graph" data-screenshot-source="browser" data-screenshot-caption="Graf Component CI: changes → frontend/backend → Required CI; komponent pominięty zgodnie z planem i końcowy gate success.">
+        <a class="screenshot-link" href="screenshots/required-gate-graph.png" target="_blank" rel="noopener" aria-label="Otwórz graf końcowego Required CI w pełnym rozmiarze">
+          <img src="screenshots/required-gate-graph.png" alt="Graf Component CI z planowaniem changes, warunkowymi komponentami frontend i backend oraz końcowym Required CI." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Warunkowe jobs mogą być pominięte; jednoznaczny Required CI ocenia cały plan.</span><a href="screenshots/required-gate-graph.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="gate-kontrakt" data-title="Kontrakt końcowego gate" data-section="checks">
+    <div class="content">
+      <div class="kicker">Nie wystarczy always() i echo OK</div>
+      <h2>Gate sprawdza <span class="accent">decyzję i wykonanie</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">required:
+  name: Required CI
+  needs: [changes, frontend, backend]
+  if: ${{ always() }}
+  runs-on: ubuntu-24.04
+  permissions: {contents: read}
+  steps:
+    - uses: actions/checkout@v7
+    - env:
+        RESULTS: ${{ toJSON(needs) }}
+      run: node .github/scripts/required.cjs</code></pre>
+        <table class="comparison">
+          <thead><tr><th>Plan</th><th>Wynik</th><th>Akceptujemy?</th></tr></thead>
+          <tbody>
+            <tr><td>true</td><td>success</td><td>Tak</td></tr>
+            <tr><td>false</td><td>skipped</td><td>Tak</td></tr>
+            <tr><td>true</td><td>failure / cancelled / skipped</td><td>Nie</td></tr>
+            <tr><td>brak / błędny</td><td>dowolny</td><td>Nie</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><code>always()</code> pozwala ocenić zależności także po ich błędzie. Wymagamy ponadto <code>needs.changes.result == 'success'</code>.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="gate-skrypt" data-title="Krótka implementacja required gate" data-section="checks">
+    <div class="content">
+      <div class="kicker">.github/scripts/required.cjs</div>
+      <h2>Błędny lub brakujący wynik <span class="orange">nie przechodzi</span></h2>
+      <pre><code class="language-javascript" data-example="required-gate">const results = JSON.parse(process.env.RESULTS);
+if (results.changes?.result !== 'success') {
+  throw new Error('Nie udało się ustalić planu');
+}
+for (const name of ['frontend', 'backend']) {
+  const needed = results.changes.outputs?.[name];
+  const result = results[name]?.result;
+  const accepted = (needed === 'true' &amp;&amp; result === 'success')
+    || (needed === 'false' &amp;&amp; result === 'skipped');
+  if (!accepted) throw new Error(`Niespełniony warunek: ${name}`);
+}</code></pre>
+      <p>To jawna polityka: potrzebna praca musi zakończyć się sukcesem, a niepotrzebna może być pominięta.</p>
+      <p>Jak każdy element CI, skrypt gate i konfigurację workflow chronimy review. Zielony gate nie pomoże, jeśli PR może dowolnie usunąć jego kontrole.</p>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-bezpieczenstwo" data-title="Bezpieczeństwo i utrzymanie CI" data-section="bezpieczenstwo" data-section-start data-section-title="Bezpieczeństwo i utrzymanie">
+    <div class="content">
+      <div class="kicker">15 // CI uruchamia kod</div>
+      <h2>Automatyzacja potrzebuje <span class="accent">granic zaufania</span></h2>
+      <p class="lead">Sprawdzamy nie tylko wynik testu, ale też pochodzenie kodu, danych i uprawnień.</p>
+      <div class="section-topics"><span>Sekrety</span><span>Dane zamiast kodu</span><span>Ref i aktualizacje</span></div>
+    </div>
+  </section>
+
+  <section class="slide" id="sekrety-i-uprawnienia" data-title="Sekrety i uprawnienia zależą od zadania" data-section="bezpieczenstwo">
+    <div class="content">
+      <div class="kicker">Najmniejszy potrzebny dostęp</div>
+      <h2>Build nie potrzebuje <span class="orange">prawa publikacji</span></h2>
+      <ul>
+        <li>Build i testy dostają odczyt kodu, nie domyślne <code>write-all</code>.</li>
+        <li>Zapis przez API wydzielamy do joba, który go rzeczywiście potrzebuje.</li>
+        <li>Nie przekazujemy sekretów produkcyjnych do testów z tymczasową bazą.</li>
+        <li>Sekrety nie trafiają do Git, outputs, artefaktów ani cache. Maskowanie logów jest tylko dodatkową ochroną.</li>
+        <li>Fork PR i kod zależności traktujemy jako niezaufane. Zgoda na uruchomienie nie czyni kodu bezpiecznym.</li>
+      </ul>
+      <p>Reusable workflow nie może podnieść uprawnień tokena callera. Sekrety przekazuje się przez jawny interfejs; samo env nie tworzy takiego kontraktu.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="niezaufany-tekst" data-title="Niezaufany tekst przekazujemy jako dane" data-section="bezpieczenstwo">
+    <div class="content">
+      <div class="kicker">Tytuł PR-a jest wejściem użytkownika</div>
+      <h2>Nie interpoluj danych <span class="orange">do źródła skryptu</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">- name: Sprawdź tytuł PR
+  env:
+    PR_TITLE: ${{ github.event.pull_request.title }}
+  shell: bash
+  run: |
+    test -n "$PR_TITLE"
+    printf 'Długość tytułu: %s\n' "${#PR_TITLE}"</code></pre>
+      <ul>
+        <li>Expression w env przekazuje dane, a nie fragment kodu Bash.</li>
+        <li>W github-script użyj <code>process.env.PR_TITLE</code> albo bezpośredniego odczytu payloadu <code>context</code>.</li>
+        <li>Nie wykonuj danych przez <code>eval</code>. Walidacja tekstu nie zastępuje oceny zaufania do kodu PR-a.</li>
+      </ul>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/security/secure-use#good-practices-for-mitigating-script-injection-attacks">GitHub — ograniczanie script injection</a> · <a href="https://docs.zizmor.sh/audits/#template-injection">zizmor — wykrywanie niebezpiecznej interpolacji (template-injection)</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="refs-i-immutable" data-title="Mutable refs, SHA i immutable releases" data-section="bezpieczenstwo">
+    <div class="content">
+      <div class="kicker">Kod action jest zależnością CI</div>
+      <h2>Przypnij kod. <span class="accent">Zaplanuj aktualizację.</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">- uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1</code></pre>
+      <table class="comparison">
+        <thead><tr><th>Odwołanie</th><th>Co zapewnia?</th></tr></thead>
+        <tbody>
+          <tr><td>Gałąź / ruchomy major tag</td><td>Wygodna aktualizacja, ale kod pod nazwą może się zmienić.</td></tr>
+          <tr><td>Tag konkretnej wersji</td><td>Czytelna wersja; sama nazwa tagu nie gwarantuje niezmienności.</td></tr>
+          <tr><td>Pełny commit SHA</td><td>Konkretną rewizję kodu action, nie automatyczny dowód jej bezpieczeństwa.</td></tr>
+          <tr><td>Immutable release</td><td>Niezmienny tag i assety, także dla prerelease. Tytuł, opis oraz ustawienia prerelease i latest nadal można edytować.</td></tr>
+        </tbody>
+      </table>
+      <p>Ruchomy major tag może istnieć obok immutable release, jeśli sam nie jest z takim wydaniem związany. Niektórzy autorzy z niego rezygnują; politykę i aktualizacje sprawdzamy u autora action.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/actions/reference/security/secure-use#using-third-party-actions">Pinning third-party actions</a> · <a href="https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases">Immutable releases</a> · <a href="https://docs.github.com/en/actions/how-tos/create-and-publish-actions/using-immutable-releases-and-tags-to-manage-your-actions-releases">Wydania i ruchome tagi actions</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="incydent-changed-files" data-title="Incydent tj-actions/changed-files" data-section="bezpieczenstwo">
+    <div class="content">
+      <div class="kicker">Marzec 2025 // atak na zależność automatyzacji</div>
+      <h2>Popularna action też może <span class="orange">zostać przejęta</span></h2>
+      <ul>
+        <li>W incydencie <code>tj-actions/changed-files</code> zmieniono kod osiągalny przez istniejące tagi.</li>
+        <li>Złośliwa wersja ujawniała w logach dane z pamięci runnera, w tym potencjalnie sekrety.</li>
+        <li>Publiczne logi mogły uczynić wyciek dostępny dla innych osób.</li>
+        <li>Wniosek: ogranicz uprawnienia, przypinaj zweryfikowane rewizje, oceniaj zależności i reaguj na komunikaty bezpieczeństwa.</li>
+      </ul>
+      <p>Wykrywanie zmienionych plików jest przydatne, ale dodatkowa action to również dodatkowy kod do zaufania. Pokazany klient API pozwala zobaczyć samą regułę wprost.</p>
+      <p class="source-links"><a href="https://github.com/advisories/GHSA-mrrh-fwg8-r2c3">GitHub Advisory — CVE-2025-30066, tj-actions/changed-files</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="utrzymanie-workflows" data-title="Zizmor i aktualizacje zależności Actions" data-section="bezpieczenstwo">
+    <div class="content">
+      <div class="kicker">Kontrole automatyzacji też są automatyzowane</div>
+      <h2>Workflow również <span class="accent">wymaga utrzymania</span></h2>
+      <div class="two">
+        <div>
+          <pre><code class="language-bash">actionlint
+zizmor .github/workflows
+pnpm dlx pin-github-action@3.5.2 \
+  .github/workflows --comment ' pin@{ref}'</code></pre>
+          <p><strong>actionlint:</strong> składnia i kontrakty Actions.<br><strong>zizmor:</strong> ryzykowne wzorce, uprawnienia, niezaufane dane i praktyki bezpieczeństwa.</p>
+        </div>
+        <ul>
+          <li>Dependabot i Renovate mogą przygotowywać aktualizacje referencji actions.</li>
+          <li>Sprawdzaj repozytorium autora, nowy SHA, changelog i wymagania runnera.</li>
+          <li>Po aktualizacji uruchom CI. Przypięcie starej podatnej wersji nie jest rozwiązaniem.</li>
+          <li><code>pnpm dlx</code> uruchamia tu narzędzie pin-github-action. To ono przepisuje refs w <code>uses</code>; sprawdź diff i komunikaty o nierozwiązanych odwołaniach.</li>
+        </ul>
+      </div>
+      <p class="source-links"><a href="https://docs.zizmor.sh/">zizmor</a> · <a href="https://docs.github.com/en/code-security/dependabot/working-with-dependabot/keeping-your-actions-up-to-date-with-dependabot">Dependabot dla Actions</a> · <a href="https://docs.renovatebot.com/modules/manager/github-actions/">Renovate — github-actions</a> · <a href="https://github.com/mheap/pin-github-action/tree/v3.5.2">pin-github-action 3.5.2</a></p>
+    </div>
+  </section>
+
+  <section class="slide section-opening" id="sekcja-dokumenty" data-title="LaTeX i inne zastosowania CI" data-section="dokumenty" data-section-start data-section-title="LaTeX i inne zastosowania">
+    <div class="content">
+      <div class="kicker">16 // Nie tylko aplikacje</div>
+      <h2>Dokument też ma <span class="accent">proces budowania</span></h2>
+      <p class="lead">Praca dyplomowa: źródła w Git, kompilacja w CI, PDF dla promotora i wersjonowane wydania.</p>
+      <div class="section-topics"><span>pjatk_latex</span><span>PDF jako artefakt</span><span>Prerelease PR i release main</span></div>
+    </div>
+  </section>
+
+  <section class="slide" id="pjatk-latex" data-title="Pjatk_latex — źródła pracy i wynik PDF" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">Publiczny przykład: pantadeusz/pjatk_latex // e660b9e</div>
+      <h2>Promotor potrzebuje <span class="accent">PDF z konkretnej rewizji</span></h2>
+      <div class="two">
+        <div>
+          <ul>
+            <li><code>engineer.tex</code> — główny dokument.</li>
+            <li><code>sprz.cls</code> i <code>sprz/</code> — klasa, styl i zasoby.</li>
+            <li><code>bibliography.bib</code> — bibliografia, obsługiwana przez biber.</li>
+            <li><code>engineer.pdf</code> — wynik kompilacji.</li>
+          </ul>
+        </div>
+        <div class="panel"><h3>Co weryfikuje CI?</h3><p>Składnię, dostępność ilustracji, pakietów i możliwość złożenia dokumentu.</p><p>Review nadal ocenia treść, argumentację i poprawność metod.</p></div>
+      </div>
+      <p>README projektu opisuje środowisko Debian z <code>texlive-full</code> i komendę <code>make</code>. W CI jawnie wybieramy tryb PDF i zatrzymanie po błędzie.</p>
+      <p class="small">Możesz sforkować szablon na GitHubie, zachować atrybucję i napisać własną treść. Brak jawnej licencji nie daje automatycznie prawa do redystrybucji przykładowego tekstu, logo ani innych cudzych materiałów.</p>
+      <p class="source-links"><a href="https://github.com/pantadeusz/pjatk_latex">pjatk_latex</a> · <a href="https://github.com/pantadeusz/pjatk_latex/tree/e660b9ee1e637a843c9084774abdc9b3ecdaae4c">Omawiana wersja e660b9e</a> · <a href="https://github.com/pantadeusz/pjatk_latex/blob/e660b9ee1e637a843c9084774abdc9b3ecdaae4c/Makefile">Makefile</a> · <a href="https://ctan.org/pkg/latexmk">latexmk</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="latex-kompilacja" data-title="LaTeX — kompilacja z prawem odczytu" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">Fragment joba pdf // runner Ubuntu, permissions: contents: read</div>
+      <h2>Kompiluj bez <span class="accent">prawa publikacji</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">steps:
+  - uses: actions/checkout@v7
+    with:
+      ref: ${{ github.event.pull_request.head.sha || github.sha }}
+  - name: Przygotuj TeX
+    shell: bash
+    run: |
+      sudo apt-get update
+      sudo apt-get install -y \
+        latexmk biber texlive-latex-extra texlive-bibtex-extra \
+        texlive-fonts-recommended texlive-lang-polish texlive-science
+  - name: Zbuduj PDF
+    shell: bash
+    run: |
+      latexmk -norc -pdf -interaction=nonstopmode \
+        -halt-on-error -file-line-error -no-shell-escape engineer.tex
+      test -s engineer.pdf</code></pre>
+      <p>PR: HEAD autora. Push: SHA zdarzenia. Późniejszy tag musi wskazywać tę samą rewizję.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="latex-artefakt" data-title="LaTeX — PDF i log jako artefakty" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">Kolejne kroki joba pdf</div>
+      <h2>PDF do pobrania. <span class="accent">Log do diagnozy.</span></h2>
+      <div class="two">
+        <pre><code class="language-yaml" data-embedded="github-actions">- uses: actions/upload-artifact@v7
+  with:
+    name: thesis-pdf
+    path: engineer.pdf
+    if-no-files-found: error</code></pre>
+        <pre><code class="language-yaml" data-embedded="github-actions">- if: ${{ !cancelled() }}
+  uses: actions/upload-artifact@v7
+  with:
+    name: latex-log
+    path: engineer.log
+    if-no-files-found: warn</code></pre>
+      </div>
+      <p>Udany build bez PDF jest błędem kontraktu. Log próbujemy zachować także po błędzie kompilacji; jeśli błąd wystąpił wcześniej, plik może jeszcze nie istnieć.</p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-latex-artifact" data-title="LaTeX — PDF i log do pobrania" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>LaTeX: <span class="accent">artefakty kompilacji</span></h2>
+      <figure class="screenshot" data-screenshot="latex-artifact" data-screenshot-source="browser" data-screenshot-caption="Udany run kompilacji LaTeX: job pdf oraz artefakty thesis-pdf i latex-log.">
+        <a class="screenshot-link" href="screenshots/latex-artifact.png" target="_blank" rel="noopener" aria-label="Otwórz artefakty kompilacji LaTeX w pełnym rozmiarze">
+          <img src="screenshots/latex-artifact.png" alt="Udane uruchomienie kompilacji LaTeX z artefaktami thesis-pdf i latex-log w GitHub Actions." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>PDF i log należą do konkretnego runa, a więc do konkretnej rewizji źródeł.</span><a href="screenshots/latex-artifact.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="latex-polityka-wydan" data-title="PDF — artefakt, prerelease PR i release main" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">Źródło zmiany określa sposób publikacji</div>
+      <h2>Podgląd PR-a i <span class="accent">wydanie z main</span></h2>
+      <table class="comparison">
+        <thead><tr><th>Źródło</th><th>Wynik</th><th>Granica bezpieczeństwa</th></tr></thead>
+        <tbody>
+          <tr><td>Fork PR lub Dependabot</td><td>PDF jako artefakt.</td><td>Ograniczony token; bez publikacji release.</td></tr>
+          <tr><td>Same-repo PR bez zmian workflow</td><td>Artefakt i <strong>prerelease</strong> dla rewizji PR-a.</td><td>Osobny job publikujący po udanej kompilacji.</td></tr>
+          <tr><td>PR zmienia <code>.github/workflows/</code></td><td>PDF jako artefakt.</td><td>GITHUB_TOKEN nie ma prawa Workflows: write potrzebnego do utworzenia release dla takiej rewizji.</td></tr>
+          <tr><td>Push do main</td><td>PDF jako artefakt i zwykły <strong>release</strong> dla commita main.</td><td>Publikacja dopiero po przejściu zmian przez reguły main.</td></tr>
+        </tbody>
+      </table>
+      <p>Workflow najpierw trafia na main. Nie podmieniamy docelowego SHA, żeby obejść ograniczenie API. To publikacja dokumentu, nie deployment aplikacji.</p>
+      <p class="source-links"><a href="https://docs.github.com/en/rest/releases/releases#create-a-release">Release API — uprawnienia dla zmian workflow</a></p>
+    </div>
+  </section>
+
+  <section class="slide" id="latex-api-policy" data-title="Polityka publikacji — zmiany plików workflow" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">Fragment joba policy // tylko odczyt API, bez checkout</div>
+      <h2>Zmiana workflow → <span class="accent">tylko artefakt</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions" data-example="latex-policy">runs-on: ubuntu-24.04
+permissions: {pull-requests: read}
+outputs:
+  workflow-edits: ${{ steps.files.outputs.workflow-edits }}
+steps:
+  - id: files
+    uses: actions/github-script@v9
+    with:
+      script: |
+        const pr = context.payload.pull_request;
+        const files = pr ? await github.paginate(github.rest.pulls.listFiles,
+          { ...context.repo, pull_number: pr.number, per_page: 100 }) : [];
+        if (files.length &gt;= 3000) throw new Error('Niekompletna lista plików PR');
+        const paths = files.flatMap(f => [f.filename, f.previous_filename]);
+        const edited = paths.some(p => p?.startsWith('.github/workflows/'));
+        core.setOutput('workflow-edits', edited);
+        if (edited) core.notice('Zmiana workflow: PDF pozostaje artefaktem.');</code></pre>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-latex-artifact-only" data-title="LaTeX — zmiana workflow, tylko artefakt" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Zmiana workflow: <span class="accent">PDF bez release</span></h2>
+      <figure class="screenshot" data-screenshot="latex-artifact-only" data-screenshot-source="browser" data-screenshot-caption="Run PR-a zmieniającego workflow: komunikat policy o pozostawieniu PDF jako artefaktu, pominięty publish i artefakt thesis-pdf.">
+        <a class="screenshot-link" href="screenshots/latex-artifact-only.png" target="_blank" rel="noopener" aria-label="Otwórz wynik polityki publikacji PDF w pełnym rozmiarze">
+          <img src="screenshots/latex-artifact-only.png" alt="Run PR-a ze zmianą workflow: komunikat o PDF jako artefakcie, pominięta publikacja i dostępny thesis-pdf." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Policy wyjaśnia pominięcie publikacji; gotowy PDF pozostaje artefaktem.</span><a href="screenshots/latex-artifact-only.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="latex-publish-guard" data-title="Publikacja PDF w osobnym jobie" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">Fragment jobs // workflow reaguje na PR oraz push do main</div>
+      <h2>Prawo zapisu <span class="accent">tylko w jobie publikacji</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">publish:
+  needs: [pdf, policy]
+  if: &gt;-
+    ${{ needs.policy.outputs.workflow-edits == 'false'
+        &amp;&amp; ((github.event_name == 'push' &amp;&amp; github.ref == 'refs/heads/main')
+            || (github.event_name == 'pull_request'
+                &amp;&amp; github.event.pull_request.head.repo.full_name == github.repository
+                &amp;&amp; github.event.pull_request.user.login != 'dependabot[bot]')) }}
+  runs-on: ubuntu-24.04
+  permissions: {contents: write}
+  steps:
+    - uses: actions/download-artifact@v8
+      with:
+        name: thesis-pdf
+        path: release-files</code></pre>
+      <p>Po sukcesie pdf i policy pobieramy gotowy plik. Nie wykonujemy kodu PR-a w jobie z prawem zapisu.</p>
+      <p>Następne kroki rozróżnią prerelease PR i zwykły release main.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="latex-prerelease" data-title="Prerelease PDF dla PR z tego samego repozytorium" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">Krok po download w chronionym jobie publish</div>
+      <h2>Prerelease: <span class="accent">PDF do review</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">- if: ${{ github.event_name == 'pull_request' }}
+  shell: bash
+  env:
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    GH_REPO: ${{ github.repository }}
+    PR_NUMBER: ${{ github.event.number }}
+    SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+  run: |
+    tag="pr-${PR_NUMBER}-run-${GITHUB_RUN_ID}-a${GITHUB_RUN_ATTEMPT}"
+    gh release create "$tag" release-files/engineer.pdf \
+      --prerelease --latest=false --target "$SOURCE_SHA" \
+      --title "PDF PR #$PR_NUMBER" \
+      --notes "Wersja do review; commit $SOURCE_SHA."</code></pre>
+      <p>Unikalny tag dla run i próby nie nadpisuje poprzedniego wydania. <code>GH_REPO</code> wskazuje repozytorium bez potrzeby checkout.</p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-latex-prerelease" data-title="LaTeX — prerelease PDF dla PR" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Prerelease: <span class="accent">PDF konkretnego PR-a</span></h2>
+      <figure class="screenshot" data-screenshot="latex-prerelease" data-screenshot-source="browser" data-screenshot-caption="GitHub Releases: PDF dla PR-a z oznaczeniem Pre-release, tagiem uruchomienia, commitem PR-a i plikiem engineer.pdf.">
+        <a class="screenshot-link" href="screenshots/latex-prerelease.png" target="_blank" rel="noopener" aria-label="Otwórz prerelease PDF w pełnym rozmiarze">
+          <img src="screenshots/latex-prerelease.png" alt="Wydanie PDF PR w GitHub Releases z etykietą Pre-release, tagiem i plikiem engineer.pdf." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Wersja do review jest prerelease dla rewizji PR-a, nie wydaniem Latest.</span><a href="screenshots/latex-prerelease.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="latex-release" data-title="Pełne wydanie PDF z main" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">Drugi krok w tym samym jobie publish</div>
+      <h2>Release: <span class="accent">PDF z zaakceptowanego main</span></h2>
+      <pre><code class="language-yaml" data-embedded="github-actions">- if: ${{ github.event_name == 'push' }}
+  shell: bash
+  env:
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    GH_REPO: ${{ github.repository }}
+    SOURCE_SHA: ${{ github.sha }}
+  run: |
+    tag="pdf-main-${GITHUB_RUN_ID}-a${GITHUB_RUN_ATTEMPT}"
+    gh release create "$tag" release-files/engineer.pdf \
+      --latest --target "$SOURCE_SHA" \
+      --title "PDF z main" \
+      --notes "Wydanie dokumentu; commit $SOURCE_SHA."</code></pre>
+      <p>Nie ustawiamy <code>--prerelease</code>. Release utworzony przez <code>GITHUB_TOKEN</code> nie uruchomi kolejnego workflow przez <code>on: release</code>.</p>
+      <p class="source-links"><a href="https://cli.github.com/manual/gh_release_create">gh release create — target, prerelease i latest</a></p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-latex-release" data-title="LaTeX — pełne wydanie PDF z main" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">GitHub · widok z przeglądarki</div>
+      <h2>Release: <span class="accent">PDF po integracji</span></h2>
+      <figure class="screenshot" data-screenshot="latex-release" data-screenshot-source="browser" data-screenshot-caption="GitHub Releases: zwykłe wydanie PDF z main, tag uruchomienia, commit main i plik engineer.pdf, bez oznaczenia Pre-release.">
+        <a class="screenshot-link" href="screenshots/latex-release.png" target="_blank" rel="noopener" aria-label="Otwórz pełne wydanie PDF w pełnym rozmiarze">
+          <img src="screenshots/latex-release.png" alt="Pełne wydanie PDF z main w GitHub Releases, z tagiem i plikiem engineer.pdf, bez etykiety Pre-release." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Zaakceptowana rewizja main ma zwykłe wydanie, odrębne od podglądu PR-a.</span><a href="screenshots/latex-release.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide" id="latex-ostrzezenia" data-title="LaTeX — zielona kompilacja nie usuwa ostrzeżeń" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">Co naprawdę dowodzi zbudowany PDF?</div>
+      <h2>Brak błędu kompilacji ≠ <span class="accent">gotowa praca</span></h2>
+      <div class="two">
+        <div class="panel"><h3>Błąd</h3><p>Nieznane polecenie albo brak wymaganego pliku może zatrzymać kompilację i zablokować publikację.</p></div>
+        <div class="panel"><h3>Ostrzeżenie</h3><p>Brakujące cytowanie lub odwołanie może pozostawić PDF i kod sukcesu. <code>-halt-on-error</code> nie zamienia każdego warning w błąd.</p></div>
+      </div>
+      <p>Jeśli zespół wymaga braku określonych ostrzeżeń, dopisuje jawną kontrolę logu. Ocena treści naukowej nadal należy do człowieka.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="dokumentacja-notebooki" data-title="Dokumentacja, notebooki i raporty" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">Ten sam model poza LaTeX</div>
+      <h2>Automatyzuj <span class="accent">sprawdzalne twierdzenia</span></h2>
+      <div class="two">
+        <div class="panel"><h3>Dokumentacja</h3><p>Build, kontrola linków i brakujących zasobów. HTML lub PDF jako wynik do obejrzenia.</p><p>Błąd sieci do zewnętrznej strony trzeba odróżnić od nieprawidłowego linku.</p></div>
+        <div class="panel"><h3>Notebook lub raport</h3><p>Wykonanie od początku, z określonymi danymi, bibliotekami i ziarnem losowym.</p><p>Brak ukrytego stanu sesji jest weryfikowalny; poprawność metody badawczej wymaga osobnej oceny.</p></div>
+      </div>
+      <p>W każdym przypadku ustalamy: wejście → polecenie → warunek błędu → wynik → odbiorca.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="podsumowanie" data-title="Podsumowanie — wiarygodna informacja z CI" data-section="dokumenty">
+    <div class="content">
+      <div class="kicker">Od procesu do reguły zespołu</div>
+      <h2>CI skraca pętlę. <span class="accent">Zespół zamyka pętlę.</span></h2>
+      <div class="flow flow-line"><div class="node">Mała zmiana</div><div class="arrow">→</div><div class="node">Automatyczne kontrole</div><div class="arrow">→</div><div class="node">Czytelny wynik</div><div class="arrow">→</div><div class="node">Review + decyzja</div></div>
+      <ol>
+        <li><strong>Co sprawdziliśmy?</strong> Wskaż rewizję, środowisko i rzeczywisty zakres testów.</li>
+        <li><strong>Jak przenosimy wynik?</strong> Odróżnij output, env, artefakt i cache.</li>
+        <li><strong>Dlaczego merge jest dozwolony?</strong> Wskaż wymagany check, jego kontrakt i uprawnienia procesu.</li>
+      </ol>
+      <p>W laboratorium zastosujemy te mechanizmy do aplikacji. Wykład pozostaje mapą pojęć, nie gotowym rozwiązaniem zadania.</p>
+    </div>
+  </section>
+
+</main>
+<footer class="hud">
+  <a href="../../index.html" aria-label="Powrót do strony kursu">TDO</a>
+  <details class="presentation-picker">
+    <summary>Prezentacje</summary>
+    <nav aria-label="Wybór prezentacji">
+      <a href="../docker/index.html">01 — Docker i Compose</a>
+      <a href="../ci/index.html" aria-current="page">02 — CI i SDLC</a>
+    </nav>
+  </details>
+  <button type="button" data-prev aria-label="Poprzedni slajd">←</button>
+  <div class="progress" aria-hidden="true"><span></span></div>
+  <button type="button" data-next aria-label="Następny slajd">→</button>
+  <span class="slide-number" aria-live="polite"></span>
+</footer>
+<script src="../../assets/js/presentations.js"></script>
+<script src="../docker/slides.js"></script>
+<script src="sections.js"></script>
+</body>
+</html>
