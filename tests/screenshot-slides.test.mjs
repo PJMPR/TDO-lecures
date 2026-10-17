@@ -11,10 +11,12 @@ const text = (node) => node.nodeName === '#text' ? node.value : (node.childNodes
 const all = nodes(parse(html));
 const slides = all.filter((node) => node.tagName === 'section' && hasClass(node, 'slide'));
 const hooks = all.filter((node) => attribute(node, 'data-screenshot') !== undefined);
-const browserHooks = hooks.filter((node) => attribute(node, 'data-screenshot-source') === 'browser');
+const imageHooks = hooks.filter((node) => node.tagName === 'figure');
 const groups = [
   ['pierwszy-run', ['hello-run']],
   ['setup-job', ['hello-setup']],
+  ['ide-kolorowanie', ['ide-injections']],
+  ['narzedzia-yaml', ['ide-autocomplete']],
   ['podstawowe-needs', ['jobs-needs-graph']],
   ['formularz-inputs', ['dispatch-inputs']],
   ['env-vars-secrets', ['settings-vars', 'settings-secrets']],
@@ -35,14 +37,14 @@ const groups = [
   ['latex-release', ['latex-release']],
 ];
 
-test('keeps all 27 unique hooks, with one linked PNG per browser evidence figure', () => {
+test('keeps all 27 unique hooks, with one linked PNG per evidence figure', () => {
   assert.equal(hooks.length, 27);
   assert.equal(new Set(hooks.map((node) => attribute(node, 'data-screenshot'))).size, 27);
-  assert.deepEqual(browserHooks.map((node) => attribute(node, 'data-screenshot')), groups.flatMap(([, ids]) => ids));
+  assert.deepEqual(imageHooks.map((node) => attribute(node, 'data-screenshot')), groups.flatMap(([, ids]) => ids));
   const ids = all.map((node) => attribute(node, 'id')).filter(Boolean);
   assert.equal(new Set(ids).size, ids.length, 'HTML ids must remain unique');
 
-  for (const figure of browserHooks) {
+  for (const figure of imageHooks) {
     const id = attribute(figure, 'data-screenshot');
     assert.equal(figure.tagName, 'figure', id);
     assert.ok(attribute(figure, 'data-screenshot-caption')?.trim(), id);
@@ -62,7 +64,7 @@ test('keeps all 27 unique hooks, with one linked PNG per browser evidence figure
     assert.match(text(caption), /Otwórz pełny rozmiar/, id);
   }
   assert.equal(all.filter((node) => node.tagName === 'img'
-    && attribute(node, 'src')?.startsWith('screenshots/')).length, 25);
+    && attribute(node, 'src')?.startsWith('screenshots/')).length, 27);
 });
 
 test('inserts evidence immediately after its explanation, in hook order and the same section', () => {
@@ -102,14 +104,16 @@ test('keeps the comparison rows and describes the pending two-run observation as
   }
 });
 
-test('leaves IDE captures explicitly manual without substituting browser images', () => {
-  const manual = hooks.filter((node) => attribute(node, 'data-screenshot-source') === 'manual-ide');
-  assert.deepEqual(manual.map((node) => attribute(node, 'data-screenshot')), ['ide-injections', 'ide-autocomplete']);
-  for (const frame of manual) {
-    assert.equal(frame.tagName, 'p');
-    assert.match(text(frame), /Ręczny kadr z IDE do uzupełnienia/);
-    assert.match(text(frame), /Zrzut przeglądarki nie zastępuje/);
-    assert.equal(nodes(frame).filter((node) => node.tagName === 'img').length, 0);
+test('uses the supplied real IDE images instead of manual placeholders', async () => {
+  const ide = hooks.filter((node) => attribute(node, 'data-screenshot-source') === 'ide');
+  assert.deepEqual(ide.map((node) => attribute(node, 'data-screenshot')), ['ide-injections', 'ide-autocomplete']);
+  assert.equal(hooks.filter((node) => attribute(node, 'data-screenshot-source') === 'browser').length, 25);
+  for (const frame of ide) {
+    assert.equal(frame.tagName, 'figure');
+    const image = nodes(frame).find((node) => node.tagName === 'img');
+    const content = await readFile(new URL(`../lectures/ci/${attribute(image, 'src')}`, import.meta.url));
+    assert.equal(content.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
   }
-  assert.doesNotMatch(html, /screenshots\/ide-(?:injections|autocomplete)\.png/);
+  assert.match(attribute(ide[1], 'data-screenshot-caption'), /actions\/github-script/);
+  assert.doesNotMatch(html, /manual-ide|Ręczny kadr z IDE do uzupełnienia/);
 });
