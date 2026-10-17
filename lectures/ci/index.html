@@ -547,7 +547,19 @@ permissions:
   run: echo main</code></pre></div>
       </div>
       <p>Tekst jest identyczny. Po prawej mechanizm strony koloruje jawny Bash, github-script i expressions podczas budowania HTML. To nie jest symulacja interfejsu IDE.</p>
-      <p class="capture" data-screenshot="ide-injections" data-screenshot-source="manual-ide" data-screenshot-caption="Ten sam krótki workflow w IDE: YAML-only obok aktywnego kolorowania Bash, github-script i GitHub expressions. Pokaż rzeczywisty efekt language injection, nie ręcznie kolorowany tekst.">Ręczny kadr z IDE do uzupełnienia: ten sam fragment z rozpoznawaniem osadzonych języków. Zrzut przeglądarki nie zastępuje tego widoku.</p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-ide-injections" data-title="IDE — osadzone języki w workflow" data-section="yaml">
+    <div class="content">
+      <div class="kicker">IDE · rzeczywisty widok edytora</div>
+      <h2>Jeden workflow, <span class="accent">kilka języków</span></h2>
+      <figure class="screenshot" data-screenshot="ide-injections" data-screenshot-source="ide" data-screenshot-caption="IDE rozpoznaje YAML oraz osadzone Bash, JavaScript i GitHub expressions; widoczne wskazówki language injection.">
+        <a class="screenshot-link" href="screenshots/ide-injections.png" target="_blank" rel="noopener" aria-label="Otwórz widok osadzonych języków w IDE w pełnym rozmiarze">
+          <img src="screenshots/ide-injections.png" alt="Workflow w IDE: YAML, skrypt Bash, JavaScript w actions/github-script i warunek GitHub expressions, z komentarzami language injection." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>Kolorowanie osadzonych języków w prawdziwym edytorze, nie w podglądzie HTML.</span><a href="screenshots/ide-injections.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
     </div>
   </section>
 
@@ -572,8 +584,20 @@ yq '.jobs.hello.steps' \
           <p><strong>actionlint:</strong> błędy specyficzne dla Actions.<br><strong>yq:</strong> odczyt struktury YAML, nie pełna walidacja workflow.</p>
         </div>
       </div>
-      <p class="capture" data-screenshot="ide-autocomplete" data-screenshot-source="manual-ide" data-screenshot-caption="Uzupełnianie with dla actions/setup-dotnet: widoczny input global-json-file i jego opis; bez danych prywatnego repozytorium.">Ręczny kadr z IDE do uzupełnienia: podpowiedź inputów action wraz z opisem. Zrzut przeglądarki nie zastępuje tego widoku.</p>
       <p class="source-links"><a href="https://github.com/rhysd/actionlint">actionlint</a> · <a href="https://mikefarah.gitbook.io/yq">yq</a></p>
+    </div>
+  </section>
+
+  <section class="slide screenshot-slide" id="screenshot-ide-autocomplete" data-title="IDE — podpowiedzi inputów action" data-section="yaml">
+    <div class="content">
+      <div class="kicker">IDE · rzeczywisty widok edytora</div>
+      <h2>Podpowiedzi <span class="accent">wynikają z metadanych action</span></h2>
+      <figure class="screenshot" data-screenshot="ide-autocomplete" data-screenshot-source="ide" data-screenshot-caption="Uzupełnianie with dla actions/github-script: inputy github-token i user-agent, ich opisy oraz domyślna wartość jako wyrażenie github.token.">
+        <a class="screenshot-link" href="screenshots/ide-autocomplete.png" target="_blank" rel="noopener" aria-label="Otwórz podpowiedzi inputów action w IDE w pełnym rozmiarze">
+          <img src="screenshots/ide-autocomplete.png" alt="Autocomplete w with dla actions/github-script: github-token i user-agent wraz z opisami; domyślne github.token jest wyrażeniem, nie ujawnioną wartością tokenu." loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>IDE podpowiada nazwy inputów, ich opisy i wartości domyślne.</span><a href="screenshots/ide-autocomplete.png" target="_blank" rel="noopener">Otwórz pełny rozmiar ↗</a></figcaption>
+      </figure>
     </div>
   </section>
 
