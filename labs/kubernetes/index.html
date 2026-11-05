@@ -144,10 +144,6 @@ kubectl get nodes</code></pre>
 <section id="zadanie-03" data-task="3"><span class="task-level">Manifesty</span><h2>Zadanie 3 — Namespace i struktura katalogu</h2>
 <figure class="lab-diagram"><figcaption>Namespace tworzy wspólną przestrzeń dla zasobów laboratorium</figcaption><div class="diagram-boundary"><strong>Namespace: mission-control</strong><div class="diagram-flow"><span class="diagram-node muted">ConfigMap / Secret</span><span class="diagram-node database">db</span><span class="diagram-node api">api</span><span class="diagram-node frontend">frontend</span><span class="diagram-node route">Ingress</span></div></div></figure>
 <ol class="task-steps"><li>Utwórz katalog <code>k8s/</code>.<details class="step-hint"><summary>Pokaż przykład struktury</summary><pre><code class="language-text">k8s/&#10;└── 00-namespace.yaml</code></pre></details></li><li>Dodaj <code>00-namespace.yaml</code> z Namespace <code>mission-control</code>.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">apiVersion: v1&#10;kind: Namespace&#10;metadata:&#10;  name: mission-control</code></pre></details></li><li>Zastosuj manifest i ustaw namespace bieżącego kontekstu albo podawaj <code>-n</code> jawnie.<details class="step-hint"><summary>Pokaż przykład polecenia</summary><pre><code class="language-powershell">kubectl apply -f k8s/00-namespace.yaml&#10;kubectl config set-context --current --namespace=mission-control</code></pre><p>Alternatywnie dopisuj <code>-n mission-control</code> do każdego polecenia.</p></details></li></ol>
-<pre><code class="language-yaml">apiVersion: v1
-kind: Namespace
-metadata:
-  name: mission-control</code></pre>
 <pre><code class="language-powershell">kubectl apply -f k8s/00-namespace.yaml
 kubectl get namespace mission-control
 kubectl config set-context --current --namespace=mission-control</code></pre>
@@ -159,25 +155,6 @@ kubectl config set-context --current --namespace=mission-control</code></pre>
 <figure class="lab-diagram"><figcaption>Konfiguracja jest dostarczana podczas uruchamiania, a nie zapisywana w obrazach</figcaption><div class="diagram-flow"><span class="diagram-node config">ConfigMap<br><small>nazwa bazy, użytkownik</small></span><span class="diagram-arrow split">↘</span><span class="diagram-node database">Pod MySQL</span><span class="diagram-divider">│</span><span class="diagram-node secret">Secret<br><small>hasła, connection string</small></span><span class="diagram-arrow split">↗</span><span class="diagram-node api">Pody API</span></div></figure>
 <div class="glossary-definition"><div id="pojecie-configmap"><p><strong>ConfigMap</strong> to zestaw zwykłych ustawień aplikacji, które nie są tajne, np. nazwa bazy. Dzięki niej nie trzeba wpisywać tych wartości do obrazu kontenera.</p><details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">apiVersion: v1&#10;kind: ConfigMap&#10;metadata:&#10;  name: mission-config&#10;data:&#10;  MYSQL_DATABASE: mission_control&#10;  MYSQL_USER: mission</code></pre></details></div><div id="pojecie-secret"><p><strong>Secret</strong> przechowuje dane, których nie chcemy umieszczać bezpośrednio w Deploymentach, np. hasła. Uwaga: Secret poprawia organizację i kontrolę dostępu, ale samo Base64 nie szyfruje danych.</p><details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">apiVersion: v1&#10;kind: Secret&#10;metadata:&#10;  name: mission-secret&#10;type: Opaque&#10;stringData:&#10;  MYSQL_PASSWORD: mission-local-password&#10;  MYSQL_ROOT_PASSWORD: mission-local-root-password&#10;  ConnectionStrings__MissionDb: &quot;Server=db;Port=3306;Database=mission_control;User=mission;Password=mission-local-password&quot;</code></pre></details></div><a class="glossary-back" href="#slowniczek">Wróć do słowniczka ↑</a></div>
 <ol class="task-steps"><li>Dodaj ConfigMap z nazwą bazy i użytkownikiem.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">apiVersion: v1&#10;kind: ConfigMap&#10;metadata:&#10;  name: mission-config&#10;  namespace: mission-control&#10;data:&#10;  MYSQL_DATABASE: mission_control&#10;  MYSQL_USER: mission</code></pre><p>Wartości są takie same jak domyślne wartości w <code>compose.yaml</code>.</p></details></li><li>Dodaj Secret z lokalnymi hasłami ćwiczeniowymi.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">apiVersion: v1&#10;kind: Secret&#10;metadata:&#10;  name: mission-secret&#10;  namespace: mission-control&#10;type: Opaque&#10;stringData:&#10;  MYSQL_PASSWORD: mission-local-password&#10;  MYSQL_ROOT_PASSWORD: mission-local-root-password&#10;  ConnectionStrings__MissionDb: &quot;Server=db;Port=3306;Database=mission_control;User=mission;Password=mission-local-password&quot;</code></pre><p>To wyłącznie lokalne wartości ćwiczeniowe zgodne ze starterem. Nie używaj ich poza laboratorium.</p></details></li><li>Zastosuj i sprawdź oba zasoby.<details class="step-hint"><summary>Pokaż przykład polecenia</summary><pre><code class="language-powershell">kubectl apply -f k8s/10-config.yaml&#10;kubectl get configmap,secret&#10;kubectl describe configmap mission-config</code></pre></details></li></ol>
-<pre><code class="language-yaml"># 10-config.yaml — szkielet
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: mission-config
-  namespace: mission-control
-data:
-  MYSQL_DATABASE: ...
-  MYSQL_USER: ...
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: mission-secret
-  namespace: mission-control
-type: Opaque
-stringData:
-  MYSQL_PASSWORD: ...
-  MYSQL_ROOT_PASSWORD: ...</code></pre>
 <pre><code class="language-powershell">kubectl apply -f k8s/10-config.yaml
 kubectl get configmap,secret
 kubectl describe configmap mission-config
@@ -190,18 +167,6 @@ kubectl get secret mission-secret -o jsonpath="{.data.MYSQL_PASSWORD}"</code></p
 <figure class="lab-diagram"><figcaption>Service daje bazie stałą nazwę, a PVC przechowuje dane poza Podem</figcaption><div class="diagram-flow"><span class="diagram-node api">API<br><small>Server=db</small></span><span class="diagram-arrow">→</span><span class="diagram-node service">Service db<br><small>:3306</small></span><span class="diagram-arrow">→</span><span class="diagram-node database">Pod MySQL</span><span class="diagram-arrow down">↓</span><span class="diagram-node storage">PVC mysql-data<br><small>1Gi</small></span></div></figure>
 <div class="callout warning" id="pojecie-pvc"><p><strong>PVC (PersistentVolumeClaim) — „prośba aplikacji o dysk”.</strong> MySQL zapisuje dane w katalogu <code>/var/lib/mysql</code>. Gdy katalog jest podłączony do PVC, dane pozostają po usunięciu i odtworzeniu Poda. PVC nie jest jednak backupem.</p><details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">apiVersion: v1&#10;kind: PersistentVolumeClaim&#10;metadata:&#10;  name: mysql-data&#10;spec:&#10;  accessModes: [ReadWriteOnce]&#10;  resources:&#10;    requests: {storage: 1Gi}&#10;---&#10;# fragment Poda/Deploymentu&#10;volumeMounts:&#10;  - name: data&#10;    mountPath: /var/lib/mysql&#10;volumes:&#10;  - name: data&#10;    persistentVolumeClaim:&#10;      claimName: mysql-data</code></pre></details><a class="glossary-back" href="#slowniczek">Wróć do słowniczka ↑</a></div>
 <ol class="task-steps"><li>Dodaj PVC żądające <code>1Gi</code> w domyślnej StorageClass.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">apiVersion: v1&#10;kind: PersistentVolumeClaim&#10;metadata:&#10;  name: mysql-data&#10;  namespace: mission-control&#10;spec:&#10;  accessModes: [ReadWriteOnce]&#10;  resources:&#10;    requests:&#10;      storage: 1Gi</code></pre></details></li><li>Dodaj Service <code>db</code> typu ClusterIP na porcie 3306.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">apiVersion: v1&#10;kind: Service&#10;metadata:&#10;  name: db&#10;  namespace: mission-control&#10;spec:&#10;  type: ClusterIP&#10;  selector:&#10;    app: db&#10;  ports:&#10;    - port: 3306&#10;      targetPort: 3306</code></pre></details></li><li>Dodaj jedno-replikowy Deployment <code>db</code> z obrazem <code>mysql:8.4</code>.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">apiVersion: apps/v1&#10;kind: Deployment&#10;metadata:&#10;  name: db&#10;  namespace: mission-control&#10;spec:&#10;  replicas: 1&#10;  selector:&#10;    matchLabels: {app: db}&#10;  template:&#10;    metadata:&#10;      labels: {app: db}&#10;    spec:&#10;      containers:&#10;        - name: db&#10;          image: mysql:8.4&#10;          ports:&#10;            - {containerPort: 3306}</code></pre></details></li><li>Wczytaj ConfigMap i Secret przez <code>envFrom</code>.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">containers:&#10;  - name: db&#10;    envFrom:&#10;      - configMapRef:&#10;          name: mission-config&#10;      - secretRef:&#10;          name: mission-secret</code></pre></details></li><li>Zamontuj PVC w <code>/var/lib/mysql</code>.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">containers:&#10;  - name: db&#10;    volumeMounts:&#10;      - name: data&#10;        mountPath: /var/lib/mysql&#10;volumes:&#10;  - name: data&#10;    persistentVolumeClaim:&#10;      claimName: mysql-data</code></pre></details></li><li>Przepisz healthcheck Compose na readiness i liveness probe typu <code>exec</code>.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">readinessProbe:&#10;  exec:&#10;    command: ["sh", "-c", "mysqladmin ping -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD"]&#10;  initialDelaySeconds: 10&#10;  periodSeconds: 5&#10;livenessProbe:&#10;  exec:&#10;    command: ["sh", "-c", "mysqladmin ping -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD"]&#10;  initialDelaySeconds: 30&#10;  periodSeconds: 10</code></pre></details></li></ol>
-<pre><code class="language-yaml"># 20-database.yaml — kontrakt, nie pełne rozwiązanie
-kind: PersistentVolumeClaim
-# accessModes: [ReadWriteOnce], requests.storage: 1Gi
----
-kind: Service
-# name: db, port: 3306
----
-kind: Deployment
-# replicas: 1, image: mysql:8.4
-# envFrom: mission-config + mission-secret
-# volumeMounts + volumes.persistentVolumeClaim
-# readinessProbe/livenessProbe: mysqladmin ping</code></pre>
 <pre><code class="language-powershell">kubectl apply -f k8s/20-database.yaml
 kubectl get pvc,pods,service
 kubectl describe pod -l app=db
@@ -227,22 +192,6 @@ FLUSH PRIVILEGES;</code></pre>
 <figure class="lab-diagram"><figcaption>Service API rozdziela ruch pomiędzy dwie wymienne repliki</figcaption><div class="diagram-flow"><span class="diagram-node frontend">frontend</span><span class="diagram-arrow">→</span><span class="diagram-node service">Service api<br><small>:8080</small></span><span class="diagram-arrow split">↗</span><span class="diagram-stack"><span class="diagram-node api">Pod API 1</span><span class="diagram-node api">Pod API 2</span></span><span class="diagram-arrow">→</span><span class="diagram-node service">Service db</span></div></figure>
 <div class="glossary-definition" id="pojecie-deployment"><p><strong>Deployment</strong> mówi Kubernetesowi: „uruchamiaj stale tyle kopii tej aplikacji”. Jeżeli Pod zniknie, Deployment tworzy następny. Gdy zmienisz obraz, Deployment stopniowo wymienia Pody na nową wersję.</p><details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">apiVersion: apps/v1&#10;kind: Deployment&#10;metadata: {name: api}&#10;spec:&#10;  replicas: 2&#10;  selector:&#10;    matchLabels: {app: api}&#10;  template:&#10;    metadata:&#10;      labels: {app: api}&#10;    spec:&#10;      containers:&#10;        - name: api&#10;          image: mission-control-api:1.0.0</code></pre><p>Jeżeli usuniesz jeden z dwóch Podów, Deployment utworzy nowy, aby ponownie były dwie repliki.</p></details><a class="glossary-back" href="#slowniczek">Wróć do słowniczka ↑</a></div>
 <ol class="task-steps"><li>Dodaj Deployment <code>api</code> z dwiema replikami obrazu <code>mission-control-api:1.0.0</code>.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">apiVersion: apps/v1&#10;kind: Deployment&#10;metadata:&#10;  name: api&#10;  namespace: mission-control&#10;spec:&#10;  replicas: 2&#10;  selector:&#10;    matchLabels: {app: api}&#10;  template:&#10;    metadata:&#10;      labels: {app: api}&#10;    spec:&#10;      containers:&#10;        - name: api&#10;          image: mission-control-api:1.0.0</code></pre></details></li><li>Ustaw <code>imagePullPolicy: Never</code> i port kontenera 8080.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">containers:&#10;  - name: api&#10;    imagePullPolicy: Never&#10;    ports:&#10;      - name: http&#10;        containerPort: 8080</code></pre></details></li><li>Zbuduj connection string ze zmiennych ConfigMap/Secret. Hostem jest Service <code>db</code>, nie localhost.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml"># dopisz do stringData w mission-secret:&#10;ConnectionStrings__MissionDb: "Server=db;Port=3306;Database=mission_control;User=mission;Password=mission-local-password"&#10;&#10;# w kontenerze API:&#10;env:&#10;  - name: ConnectionStrings__MissionDb&#10;    valueFrom:&#10;      secretKeyRef:&#10;        name: mission-secret&#10;        key: ConnectionStrings__MissionDb</code></pre></details></li><li id="pojecie-probes">Dodaj <strong>readiness probe</strong>, która decyduje, czy Pod może otrzymywać ruch, oraz <strong>liveness probe</strong>, która wykrywa zawieszony kontener i może spowodować jego restart. Obie sondy HTTP kieruj na <code>/health</code>. <a class="glossary-back" href="#slowniczek">Wróć do słowniczka ↑</a><details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">readinessProbe:&#10;  httpGet: {path: /health, port: http}&#10;  initialDelaySeconds: 5&#10;  periodSeconds: 5&#10;livenessProbe:&#10;  httpGet: {path: /health, port: http}&#10;  initialDelaySeconds: 20&#10;  periodSeconds: 10</code></pre></details></li><li>Dodaj requests i limits.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">resources:&#10;  requests:&#10;    cpu: 100m&#10;    memory: 128Mi&#10;  limits:&#10;    cpu: 500m&#10;    memory: 256Mi</code></pre></details></li><li>Dodaj ClusterIP Service <code>api</code>: port 8080 → targetPort 8080.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">apiVersion: v1&#10;kind: Service&#10;metadata:&#10;  name: api&#10;  namespace: mission-control&#10;spec:&#10;  selector: {app: api}&#10;  ports:&#10;    - name: http&#10;      port: 8080&#10;      targetPort: http</code></pre></details></li></ol>
-<pre><code class="language-yaml"># kluczowe pola 30-api.yaml
-containers:
-  - name: api
-    image: mission-control-api:1.0.0
-    imagePullPolicy: Never
-    ports:
-      - {name: http, containerPort: 8080}
-    env:
-      - name: ConnectionStrings__MissionDb
-        value: "Server=db;Port=3306;Database=...;User=...;Password=..."
-    readinessProbe:
-      httpGet: {path: /health, port: http}
-    resources:
-      requests: {cpu: 100m, memory: 128Mi}
-      limits: {cpu: 500m, memory: 256Mi}</code></pre>
-<p>Szkielet pokazuje strukturę, ale nie spełnia wymogu Secret, dopóki nie zbudujesz wartości bez ujawniania hasła. Możesz przekazać cały connection string jako jeden klucz Secret albo użyć osobnych zmiennych i zmienić sposób konfiguracji aplikacji.</p>
 <pre><code class="language-powershell">kubectl apply -f k8s/30-api.yaml
 kubectl rollout status deployment/api
 kubectl get pods -l app=api -o wide
@@ -274,39 +223,6 @@ Traefik / Ingress
      └── /              ──► Service frontend ──► nginx + Angular</code></pre>
 <div class="callout" id="pojecie-traefik"><p><strong>Traefik</strong> jest „portierem” klastra: odbiera żądania z przeglądarki, czyta reguły Ingress i przekazuje każde żądanie do właściwego Service. W Rancher Desktop zwykle jest już zainstalowany. Nginx frontendu nadal serwuje pliki Angulara; Traefik wybiera, czy ruch ma trafić do nginx, czy bezpośrednio do API.</p><details class="step-hint"><summary>Pokaż przykład użycia</summary><pre><code class="language-powershell"># sprawdź, czy kontroler istnieje&#10;kubectl get ingressclass&#10;kubectl get pods -n kube-system -l app.kubernetes.io/name=traefik&#10;&#10;# przetestuj regułę Ingress dla hosta mission.local&#10;curl.exe -H "Host: mission.local" http://127.0.0.1/health</code></pre></details><a class="glossary-back" href="#slowniczek">Wróć do słowniczka ↑</a></div>
 <ol class="task-steps"><li>Sprawdź, czy klasa <code>traefik</code> i jej Pod są dostępne.<details class="step-hint"><summary>Pokaż przykład polecenia</summary><pre><code class="language-powershell">kubectl get ingressclass&#10;kubectl get pods -n kube-system -l app.kubernetes.io/name=traefik</code></pre></details></li><li>Dodaj Ingress dla hosta <code>mission.local</code>.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">apiVersion: networking.k8s.io/v1&#10;kind: Ingress&#10;metadata:&#10;  name: mission-control&#10;  namespace: mission-control&#10;spec:&#10;  ingressClassName: traefik&#10;  rules:&#10;    - host: mission.local&#10;      http:&#10;        paths: []</code></pre></details></li><li>Skieruj <code>/api</code> oraz <code>/health</code> bezpośrednio do Service <code>api</code> na port 8080.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">paths:&#10;  - path: /api&#10;    pathType: Prefix&#10;    backend:&#10;      service:&#10;        name: api&#10;        port: {number: 8080}&#10;  - path: /health&#10;    pathType: Exact&#10;    backend:&#10;      service:&#10;        name: api&#10;        port: {number: 8080}</code></pre></details></li><li>Skieruj pozostałą ścieżkę <code>/</code> do Service <code>frontend</code> na port 80.<details class="step-hint"><summary>Pokaż przykład konfiguracji</summary><pre><code class="language-yaml">- path: /&#10;  pathType: Prefix&#10;  backend:&#10;    service:&#10;      name: frontend&#10;      port:&#10;        number: 80</code></pre></details></li><li>Przetestuj routing, podając nagłówek Host.<details class="step-hint"><summary>Pokaż przykład polecenia</summary><pre><code class="language-powershell">curl.exe -H "Host: mission.local" http://127.0.0.1/&#10;curl.exe -H "Host: mission.local" http://127.0.0.1/health</code></pre></details></li></ol>
-<pre><code class="language-yaml"># 50-ingress.yaml — szkielet
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: mission-control
-  namespace: mission-control
-spec:
-  ingressClassName: traefik # albo inna klasa wskazana przez prowadzącego
-  rules:
-    - host: mission.local
-      http:
-        paths:
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: api
-                port:
-                  number: 8080
-          - path: /health
-            pathType: Exact
-            backend:
-              service:
-                name: api
-                port:
-                  number: 8080
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: frontend
-                port:
-                  number: 80</code></pre>
 <pre><code class="language-powershell">kubectl get ingressclass
 kubectl get pods -n kube-system -l app.kubernetes.io/name=traefik
 kubectl apply -f k8s/50-ingress.yaml
