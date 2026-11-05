@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Laboratorium Kubernetes: migracja aplikacji Angular, ASP.NET Core i MySQL z Docker Compose do lokalnego klastra Rancher Desktop.">
+  <title>Laboratorium 03 · Kubernetes</title>
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <link rel="stylesheet" href="../../assets/css/code-highlighting.css">
+  <link rel="stylesheet" href="../ci/lab.css">
+  <link rel="stylesheet" href="lab.css">
+</head>
+<body>
+<a class="skip-link" href="#tresc">Przejdź do instrukcji</a>
+<header class="site-header"><nav class="shell nav" aria-label="Główna nawigacja">
+  <a class="brand" href="../../index.html"><span class="brand-mark" aria-hidden="true">◇</span>TDO // LAB 03</a>
+  <div class="nav-links"><a href="#przygotowanie">Przygotowanie</a><a href="#zadanie-01">Zadania</a><a href="#weryfikacja">Kryteria</a><a href="../../lectures/kubernetes/index.html">Wykład 03</a></div>
+</nav></header>
+<main class="shell doc-layout">
+<aside class="toc"><details class="toc-fold" data-lab-toc open><summary>Plan laboratorium</summary><nav aria-label="Spis treści">
+  <a href="#cel">Cel i architektura</a><a href="#przygotowanie">Przygotowanie</a><a href="#starter">Starter</a>
+  <p class="toc-group">Migracja do klastra</p>
+  <a href="#zadanie-01">1. Punkt odniesienia Compose</a><a href="#zadanie-02">2. Obrazy i klaster</a><a href="#zadanie-03">3. Namespace</a><a href="#zadanie-04">4. ConfigMap i Secret</a><a href="#zadanie-05">5. MySQL i PVC</a><a href="#zadanie-06">6. API</a><a href="#zadanie-07">7. Frontend</a><a href="#zadanie-08">8. Ingress</a>
+  <p class="toc-group">Eksploatacja</p>
+  <a href="#zadanie-09">9. Dane i pełny przepływ</a><a href="#zadanie-10">10. Self-healing i skala</a><a href="#zadanie-11">11. Rollout</a><a href="#zadanie-12">12. Diagnostyka i sprzątanie</a>
+  <a href="#weryfikacja">Oddanie i kryteria</a><a href="#diagnostyka">Ściąga diagnostyczna</a><a href="#pytania">Samokontrola</a>
+</nav></details></aside>
+<article class="doc ci-lab" id="tresc" tabindex="-1">
+<div class="eyebrow">Laboratorium 03 / Kubernetes</div>
+<h1>Przenieś Mission Control z Compose do Kubernetes</h1>
+<p class="lead">Otrzymujesz działającą aplikację Angular + ASP.NET Core + MySQL wraz z Docker Compose. Twoim zadaniem jest opisać jej stan w manifestach Kubernetes, uruchomić lokalnie w Rancher Desktop i udowodnić odporność rozwiązania.</p>
+
+<section id="cel"><h2>Cel i sposób pracy</h2>
+<p>Nie przepisujesz aplikacji. Migrujesz sposób jej uruchamiania. Compose pozostaje punktem odniesienia, a katalog <code>k8s/</code> tworzysz samodzielnie.</p>
+<div class="architecture-grid"><div><strong>Compose</strong><span>db + api + frontend</span><span>environment</span><span>healthcheck</span><span>named volume</span></div><div class="migration-arrow">→</div><div><strong>Kubernetes</strong><span>Deployments / Service</span><span>ConfigMap / Secret</span><span>probes</span><span>PVC</span></div></div>
+<ul><li>Wykonuj zadania po kolei i commituj małe zmiany.</li><li>Po każdym <code>kubectl apply</code> sprawdzaj stan oraz zdarzenia.</li><li>Nie używaj gotowych generatorów pełnego rozwiązania. Szkielety wymagają uzupełnienia.</li><li>Dane i hasła są wyłącznie lokalne. Nie publikuj prawdziwych sekretów.</li></ul>
+<div class="callout"><strong>Ważne:</strong> Kubernetes nie interpretuje <code>compose.yaml</code>. Nazwy usług, zmienne, porty, healthcheck i wolumen trzeba świadomie przełożyć na obiekty API.</div>
+</section>
+
+<section id="przygotowanie"><h2>Przygotowanie w domu</h2>
+<ul class="checklist"><li>Rancher Desktop działa z runtime <strong>dockerd (moby)</strong>.</li><li>Kubernetes jest włączony i ma stan Running.</li><li>Masz minimum 6 GB pamięci przydzielonej Rancher Desktop.</li><li>Działają Docker CLI, Compose i kubectl.</li><li>Port 8088 jest wolny dla testu Compose.</li></ul>
+<pre><code class="language-powershell">docker version
+docker compose version
+kubectl config current-context
+kubectl get nodes
+kubectl get storageclass
+kubectl get ingressclass</code></pre>
+<p>Oczekujesz aktywnego lokalnego kontekstu Rancher Desktop, noda w stanie <code>Ready</code>, domyślnej StorageClass i — jeśli chcesz wykonać Ingress — zainstalowanego kontrolera.</p>
+<div class="callout warning"><strong>Nie pracuj na przypadkowym klastrze:</strong> przed każdym usuwaniem sprawdź <code>kubectl config current-context</code>. Instrukcja zakłada wyłącznie lokalny klaster.</div>
+</section>
+
+<section id="starter"><h2>Projekt startowy</h2>
+<div class="callout"><strong>Dystrybucja projektu:</strong> prowadzący udostępni projekt startowy jako assignment w Classroom50. Zaakceptuj assignment za pomocą linku przekazanego przez prowadzącego, poczekaj na utworzenie indywidualnego repozytorium, a następnie sklonuj właśnie to repozytorium na komputer. W nim wykonuj zadania, zapisuj commity i oddaj rozwiązanie. Nie twórz własnego repozytorium ani nie kopiuj rozwiązania innej osoby.</div>
+<p>Katalog <a href="../../projects/kubernetes-lab-starter/README.md">projects/kubernetes-lab-starter</a> pokazuje zawartość materiału, który otrzymasz przez Classroom50. Starter zawiera gotowe Dockerfile, nginx, lockfiles i Compose, ale nie zawiera manifestów Kubernetes.</p>
+<pre><code class="language-powershell"># adres repozytorium znajdziesz po zaakceptowaniu assignmentu
+git clone ADRES_TWOJEGO_REPOZYTORIUM
+cd NAZWA_TWOJEGO_REPOZYTORIUM
+git status</code></pre>
+<pre><code class="language-text">kubernetes-lab-starter/
+├── backend/          # ASP.NET Core API + Dockerfile
+├── backend.tests/    # gotowe testy API
+├── frontend/         # Angular + nginx + Dockerfile
+├── compose.yaml      # działający punkt odniesienia
+├── .env.example
+└── k8s/              # utworzysz w laboratorium</code></pre>
+<p>Przeczytaj README oraz kontrakt: frontend słucha na 80, API na 8080, MySQL na 3306, health API to <code>/health</code>, a nginx oczekuje backendu pod nazwą DNS <code>api</code>.</p>
+</section>
+
+<section id="zadanie-01" data-task="1"><span class="task-level">Rdzeń</span><h2>Zadanie 1 — uruchom punkt odniesienia Compose</h2>
+<figure class="lab-diagram"><figcaption>Punkt odniesienia: cała aplikacja działa jeszcze w Docker Compose</figcaption><div class="diagram-flow"><span class="diagram-node client">Przeglądarka<br><small>localhost:8088</small></span><span class="diagram-arrow">→</span><span class="diagram-node frontend">frontend<br><small>nginx + Angular</small></span><span class="diagram-arrow">→</span><span class="diagram-node api">api<br><small>ASP.NET Core</small></span><span class="diagram-arrow">→</span><span class="diagram-node database">db<br><small>MySQL + volume</small></span></div></figure>
+<ol><li>W katalogu startera sprawdź wynikową konfigurację.</li><li>Zbuduj obrazy i uruchom trzy usługi.</li><li>Otwórz aplikację, dodaj misję i odśwież stronę.</li><li>Zapisz nazwy obrazów, porty, zmienne, healthcheck oraz wolumen — te elementy będziesz migrować.</li></ol>
+<pre><code class="language-powershell">docker compose config
+docker compose up --build -d
+docker compose ps
+curl.exe http://localhost:8088/health
+curl.exe http://localhost:8088/api/missions</code></pre>
+<div class="callout"><strong>Sprawdź:</strong> trzy usługi są uruchomione, db i api są healthy, a frontend jest dostępny na <code>http://localhost:8088</code>. Nie przechodź dalej, jeśli rozwiązanie bazowe nie działa.</div>
+<details class="solution-reveal"><summary>Co mapujemy z Compose?</summary><table><tr><th>Compose</th><th>Kubernetes</th></tr><tr><td>db/api/frontend</td><td>workload + Service</td></tr><tr><td>environment</td><td>ConfigMap / Secret</td></tr><tr><td>healthcheck</td><td>readinessProbe / livenessProbe</td></tr><tr><td>volume</td><td>PVC</td></tr><tr><td>ports</td><td>Service / Ingress / port-forward</td></tr></table></details>
+</section>
+
+<section id="zadanie-02" data-task="2"><span class="task-level">Rdzeń</span><h2>Zadanie 2 — przygotuj lokalne obrazy</h2>
+<figure class="lab-diagram"><figcaption>Compose buduje obrazy, a lokalny Kubernetes używa tych samych tagów</figcaption><div class="diagram-flow"><span class="diagram-node source">Dockerfile API</span><span class="diagram-arrow">→</span><span class="diagram-node image">mission-control-api<br><small>1.0.0</small></span><span class="diagram-divider">+</span><span class="diagram-node source">Dockerfile UI</span><span class="diagram-arrow">→</span><span class="diagram-node image">mission-control-frontend<br><small>1.0.0</small></span><span class="diagram-arrow">→</span><span class="diagram-node cluster">Rancher Desktop</span></div></figure>
+<p>Zatrzymaj Compose, ale nie usuwaj obrazów. Kubernetes nie może jednocześnie użyć portu 8088 zajętego przez Compose.</p>
+<pre><code class="language-powershell">docker compose down
+docker image inspect mission-control-api:1.0.0
+docker image inspect mission-control-frontend:1.0.0
+kubectl get nodes</code></pre>
+<p>Przy dockerd obrazy zbudowane przez Docker CLI są dostępne dla lokalnego klastra. W przyszłych Deploymentach ustawisz <code>imagePullPolicy: Never</code>. Dzięki temu błąd tagu da czytelny <code>ErrImageNeverPull</code>, zamiast próby pobrania obrazu z publicznego rejestru.</p>
+<div class="callout warning"><strong>Nie używaj <code>latest</code>:</strong> zachowaj jawne tagi <code>1.0.0</code>. Umożliwią później obserwację rollout i rollback.</div>
+</section>
+
+<section id="zadanie-03" data-task="3"><span class="task-level">Manifesty</span><h2>Zadanie 3 — Namespace i struktura katalogu</h2>
+<figure class="lab-diagram"><figcaption>Namespace tworzy wspólną przestrzeń dla zasobów laboratorium</figcaption><div class="diagram-boundary"><strong>Namespace: mission-control</strong><div class="diagram-flow"><span class="diagram-node muted">ConfigMap / Secret</span><span class="diagram-node database">db</span><span class="diagram-node api">api</span><span class="diagram-node frontend">frontend</span><span class="diagram-node route">Ingress</span></div></div></figure>
+<ol><li>Utwórz katalog <code>k8s/</code>.</li><li>Dodaj <code>00-namespace.yaml</code> z Namespace <code>mission-control</code>.</li><li>Zastosuj manifest i ustaw namespace bieżącego kontekstu albo podawaj <code>-n</code> jawnie.</li></ol>
+<pre><code class="language-yaml">apiVersion: v1
+kind: Namespace
+metadata:
+  name: mission-control</code></pre>
+<pre><code class="language-powershell">kubectl apply -f k8s/00-namespace.yaml
+kubectl get namespace mission-control
+kubectl config set-context --current --namespace=mission-control</code></pre>
+<p>Każdy kolejny namespaced manifest ma zawierać <code>metadata.namespace: mission-control</code>. Sama przestrzeń nazw nie jest osobnym klastrem ani pełną izolacją bezpieczeństwa.</p>
+</section>
+
+<section id="zadanie-04" data-task="4"><span class="task-level">Konfiguracja</span><h2>Zadanie 4 — ConfigMap i Secret</h2>
+<figure class="lab-diagram"><figcaption>Konfiguracja jest dostarczana podczas uruchamiania, a nie zapisywana w obrazach</figcaption><div class="diagram-flow"><span class="diagram-node config">ConfigMap<br><small>nazwa bazy, użytkownik</small></span><span class="diagram-arrow split">↘</span><span class="diagram-node database">Pod MySQL</span><span class="diagram-divider">│</span><span class="diagram-node secret">Secret<br><small>hasła, connection string</small></span><span class="diagram-arrow split">↗</span><span class="diagram-node api">Pody API</span></div></figure>
+<p>Oddziel konfigurację od obrazów. ConfigMap przechowuje nazwy i ustawienia niewrażliwe; Secret — hasła ćwiczeniowe. Nie wpisuj hasła w Deployment API ani bazy.</p>
+<pre><code class="language-yaml"># 10-config.yaml — szkielet
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mission-config
+  namespace: mission-control
+data:
+  MYSQL_DATABASE: ...
+  MYSQL_USER: ...
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mission-secret
+  namespace: mission-control
+type: Opaque
+stringData:
+  MYSQL_PASSWORD: ...
+  MYSQL_ROOT_PASSWORD: ...</code></pre>
+<pre><code class="language-powershell">kubectl apply -f k8s/10-config.yaml
+kubectl get configmap,secret
+kubectl describe configmap mission-config
+kubectl get secret mission-secret -o jsonpath="{.data.MYSQL_PASSWORD}"</code></pre>
+<div class="callout warning"><strong>Base64 nie jest szyfrowaniem:</strong> <code>stringData</code> ułatwia ćwiczenie, ale każdy z prawem odczytu Secret może poznać wartość. Używaj wyłącznie danych lokalnych.</div>
+</section>
+
+<section id="zadanie-05" data-task="5"><span class="task-level">Dane</span><h2>Zadanie 5 — MySQL, Service i PVC</h2>
+<figure class="lab-diagram"><figcaption>Service daje bazie stałą nazwę, a PVC przechowuje dane poza Podem</figcaption><div class="diagram-flow"><span class="diagram-node api">API<br><small>Server=db</small></span><span class="diagram-arrow">→</span><span class="diagram-node service">Service db<br><small>:3306</small></span><span class="diagram-arrow">→</span><span class="diagram-node database">Pod MySQL</span><span class="diagram-arrow down">↓</span><span class="diagram-node storage">PVC mysql-data<br><small>1Gi</small></span></div></figure>
+<div class="callout warning"><strong>Baza w klastrze — świadoma decyzja laboratoryjna:</strong> w tym ćwiczeniu uruchamiamy MySQL w Kubernetes, aby przećwiczyć PVC, Service, Secret, sondy oraz odtworzenie Poda bez utraty danych. Poniższy układ — jeden Deployment, jeden Pod i lokalny PVC — jest odpowiedni do nauki i środowiska developerskiego, ale nie zapewnia wysokiej dostępności ani ochrony przed awarią węzła lub storage. PVC utrzymuje dane poza cyklem życia Poda, lecz <strong>nie jest backupem</strong>. W systemie produkcyjnym zwykle wybiera się zarządzaną bazę poza klastrem albo dojrzały operator bazy, replikację, zewnętrzne backupy i regularnie testowane odtwarzanie. Nie kopiuj tego manifestu bezpośrednio jako architektury produkcyjnej.</div>
+<ol><li>Dodaj PVC żądające <code>1Gi</code> w domyślnej StorageClass.</li><li>Dodaj Service <code>db</code> typu ClusterIP na porcie 3306.</li><li>Dodaj jedno-replikowy Deployment <code>db</code> z obrazem <code>mysql:8.4</code>.</li><li>Wczytaj ConfigMap i Secret przez <code>envFrom</code>.</li><li>Zamontuj PVC w <code>/var/lib/mysql</code>.</li><li>Przepisz healthcheck Compose na readiness i liveness probe typu <code>exec</code>.</li></ol>
+<pre><code class="language-yaml"># 20-database.yaml — kontrakt, nie pełne rozwiązanie
+kind: PersistentVolumeClaim
+# accessModes: [ReadWriteOnce], requests.storage: 1Gi
+---
+kind: Service
+# name: db, port: 3306
+---
+kind: Deployment
+# replicas: 1, image: mysql:8.4
+# envFrom: mission-config + mission-secret
+# volumeMounts + volumes.persistentVolumeClaim
+# readinessProbe/livenessProbe: mysqladmin ping</code></pre>
+<pre><code class="language-powershell">kubectl apply -f k8s/20-database.yaml
+kubectl get pvc,pods,service
+kubectl describe pod -l app=db
+kubectl logs -l app=db --tail=100</code></pre>
+<p><strong>Sprawdź:</strong> PVC ma stan Bound, Pod bazy jest Ready, a Service ma endpoint. Nie skaluj tej prostej bazy do wielu replik — współdzielony katalog MySQL nie tworzy klastra bazy. Zwiększenie pola <code>replicas</code> nie konfiguruje replikacji MySQL i może prowadzić do konfliktów lub uszkodzenia danych.</p>
+</section>
+
+<section id="zadanie-06" data-task="6"><span class="task-level">Backend</span><h2>Zadanie 6 — Deployment i Service API</h2>
+<figure class="lab-diagram"><figcaption>Service API rozdziela ruch pomiędzy dwie wymienne repliki</figcaption><div class="diagram-flow"><span class="diagram-node frontend">frontend</span><span class="diagram-arrow">→</span><span class="diagram-node service">Service api<br><small>:8080</small></span><span class="diagram-arrow split">↗</span><span class="diagram-stack"><span class="diagram-node api">Pod API 1</span><span class="diagram-node api">Pod API 2</span></span><span class="diagram-arrow">→</span><span class="diagram-node service">Service db</span></div></figure>
+<ol><li>Dodaj Deployment <code>api</code> z dwiema replikami obrazu <code>mission-control-api:1.0.0</code>.</li><li>Ustaw <code>imagePullPolicy: Never</code> i port kontenera 8080.</li><li>Zbuduj connection string ze zmiennych ConfigMap/Secret. Hostem jest Service <code>db</code>, nie localhost.</li><li>Dodaj readiness i liveness HTTP na <code>/health</code>.</li><li>Dodaj requests i limits.</li><li>Dodaj ClusterIP Service <code>api</code>: port 8080 → targetPort 8080.</li></ol>
+<pre><code class="language-yaml"># kluczowe pola 30-api.yaml
+containers:
+  - name: api
+    image: mission-control-api:1.0.0
+    imagePullPolicy: Never
+    ports:
+      - {name: http, containerPort: 8080}
+    env:
+      - name: ConnectionStrings__MissionDb
+        value: "Server=db;Port=3306;Database=...;User=...;Password=..."
+    readinessProbe:
+      httpGet: {path: /health, port: http}
+    resources:
+      requests: {cpu: 100m, memory: 128Mi}
+      limits: {cpu: 500m, memory: 256Mi}</code></pre>
+<p>Szkielet pokazuje strukturę, ale nie spełnia wymogu Secret, dopóki nie zbudujesz wartości bez ujawniania hasła. Możesz przekazać cały connection string jako jeden klucz Secret albo użyć osobnych zmiennych i zmienić sposób konfiguracji aplikacji.</p>
+<pre><code class="language-powershell">kubectl apply -f k8s/30-api.yaml
+kubectl rollout status deployment/api
+kubectl get pods -l app=api -o wide
+kubectl port-forward service/api 8080:8080
+curl.exe http://localhost:8080/health</code></pre>
+</section>
+
+<section id="zadanie-07" data-task="7"><span class="task-level">Frontend</span><h2>Zadanie 7 — Deployment i Service frontendu</h2>
+<figure class="lab-diagram"><figcaption>Dwie repliki nginx serwują tę samą zbudowaną aplikację Angular</figcaption><div class="diagram-flow"><span class="diagram-node client">port-forward<br><small>localhost:8088</small></span><span class="diagram-arrow">→</span><span class="diagram-node service">Service frontend<br><small>:80</small></span><span class="diagram-arrow split">↗</span><span class="diagram-stack"><span class="diagram-node frontend">nginx + Angular 1</span><span class="diagram-node frontend">nginx + Angular 2</span></span></div></figure>
+<p>Nginx w obrazie przede wszystkim serwuje zbudowane pliki Angulara. Ma również regułę proxy <code>/api</code> → <code>api:8080</code>, potrzebną w Docker Compose i przy awaryjnym <code>port-forward</code>. W następnym zadaniu ruch wchodzący do klastra rozdzieli bezpośrednio Traefik.</p>
+<ol><li>Dodaj Deployment <code>frontend</code> z dwiema replikami.</li><li>Użyj obrazu <code>mission-control-frontend:1.0.0</code> i <code>imagePullPolicy: Never</code>.</li><li>Dodaj sondy HTTP na <code>/</code> oraz zasoby.</li><li>Dodaj ClusterIP Service <code>frontend</code> na porcie 80.</li></ol>
+<pre><code class="language-powershell">kubectl apply -f k8s/40-frontend.yaml
+kubectl rollout status deployment/frontend
+kubectl get deployment,replicaset,pods,service
+kubectl port-forward service/frontend 8088:80</code></pre>
+<p>Otwórz <code>http://localhost:8088</code>. Jeśli UI działa, ale <code>/api</code> zwraca 502, sprawdź nazwę Service API, port oraz logi nginx i backendu.</p>
+</section>
+
+<section id="zadanie-08" data-task="8"><span class="task-level">Ruch HTTP</span><h2>Zadanie 8 — Ingress</h2>
+<figure class="lab-diagram"><figcaption>Traefik jest jednym wejściem i rozdziela ruch według ścieżki</figcaption><div class="diagram-flow"><span class="diagram-node client">mission.local</span><span class="diagram-arrow">→</span><span class="diagram-node route">Traefik<br><small>Ingress Controller</small></span><span class="diagram-routes"><span><b>/</b> → Service frontend</span><span><b>/api</b> → Service api</span><span><b>/health</b> → Service api</span></span></div></figure>
+<p>Chcemy uzyskać jeden punkt wejścia do aplikacji. Traefik odbierze żądanie HTTP i na podstawie ścieżki wybierze właściwy Service. Dzięki temu nginx frontendu nie pośredniczy w normalnym ruchu do API.</p>
+<pre><code class="language-text">przeglądarka
+     │
+     ▼
+Traefik / Ingress
+     ├── /api, /health ──► Service api ──► Pody API
+     └── /              ──► Service frontend ──► nginx + Angular</code></pre>
+<div class="callout"><strong>Czym jest Traefik?</strong> To reverse proxy działający w klastrze jako kontroler Ingress. Obserwuje manifesty Ingress i automatycznie tworzy z nich reguły routingu. W Rancher Desktop/K3s jest zwykle dostępny bez instalowania kolejnego proxy. Nginx pozostaje wewnątrz kontenera frontendu jako lekki serwer plików Angulara; Traefik zarządza ruchem wchodzącym do całej aplikacji.</div>
+<ol><li>Sprawdź, czy klasa <code>traefik</code> i jej Pod są dostępne.</li><li>Dodaj Ingress dla hosta <code>mission.local</code>.</li><li>Skieruj <code>/api</code> oraz <code>/health</code> bezpośrednio do Service <code>api</code> na port 8080.</li><li>Skieruj pozostałą ścieżkę <code>/</code> do Service <code>frontend</code> na port 80.</li><li>Przetestuj routing, podając nagłówek Host.</li></ol>
+<pre><code class="language-yaml"># 50-ingress.yaml — szkielet
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mission-control
+  namespace: mission-control
+spec:
+  ingressClassName: traefik # albo inna klasa wskazana przez prowadzącego
+  rules:
+    - host: mission.local
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  number: 8080
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: api
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80</code></pre>
+<pre><code class="language-powershell">kubectl get ingressclass
+kubectl get pods -n kube-system -l app.kubernetes.io/name=traefik
+kubectl apply -f k8s/50-ingress.yaml
+kubectl get ingress
+curl.exe -H "Host: mission.local" http://127.0.0.1/
+curl.exe -H "Host: mission.local" http://127.0.0.1/health</code></pre>
+<div class="callout"><strong>Plan B:</strong> jeśli lokalny Ingress nie działa, uruchom <code>kubectl port-forward -n mission-control service/frontend 8088:80</code>. W tym wariancie ruch omija Traefika, a nginx frontendu obsługuje Angulara i przekazuje <code>/api</code> do Service API. Pozwala to dokończyć laboratorium bez modyfikowania globalnej konfiguracji Rancher Desktop.</div>
+<details class="solution-reveal"><summary>Co oznacza błąd webhooka nginx?</summary><p>Komunikat <code>failed calling webhook "validate.nginx.ingress.kubernetes.io"</code> z brakiem Service <code>ingress-nginx-controller-admission</code> oznacza pozostałość po niekompletnej instalacji ingress-nginx. To problem klastra, nie manifestu aplikacji ani Traefika. Nie usuwaj globalnego webhooka w ramach zadania — zapisz błąd, użyj planu B i zgłoś go prowadzącemu.</p></details>
+</section>
+
+<section id="zadanie-09" data-task="9"><span class="task-level">Weryfikacja</span><h2>Zadanie 9 — pełny przepływ i trwałość danych</h2>
+<figure class="lab-diagram"><figcaption>Pod bazy jest wymienny, ale nowy Pod montuje ten sam PVC</figcaption><div class="diagram-flow"><span class="diagram-node database removed">stary Pod DB<br><small>usunięty</small></span><span class="diagram-arrow">→</span><span class="diagram-node controller">Deployment<br><small>odtwarza 1 replikę</small></span><span class="diagram-arrow">→</span><span class="diagram-node database">nowy Pod DB</span><span class="diagram-arrow down">↓</span><span class="diagram-node storage">ten sam PVC<br><small>rekord pozostał</small></span></div></figure>
+<ol><li>Dodaj misję przez UI.</li><li>Odczytaj ją przez <code>/api/missions</code>.</li><li>Zapisz nazwę Poda bazy i usuń tylko ten Pod.</li><li>Poczekaj na nowy Pod i sprawdź, czy rekord pozostał.</li></ol>
+<pre><code class="language-powershell">kubectl get pods -l app=db
+kubectl delete pod POD_BAZY
+kubectl wait --for=condition=Ready pod -l app=db --timeout=180s
+kubectl get pvc
+curl.exe http://localhost:8088/api/missions</code></pre>
+<p>Deployment odtwarza Pod, a PVC ponownie montuje ten sam wolumen. To dowód trwałości tylko względem wymiany Poda — nie zastępuje backupu.</p>
+</section>
+
+<section id="zadanie-10" data-task="10"><span class="task-level">Eksploatacja</span><h2>Zadanie 10 — self-healing i skalowanie</h2>
+<figure class="lab-diagram"><figcaption>Deployment uzgadnia liczbę replik, a Service aktualizuje swoje endpointy</figcaption><div class="diagram-flow"><span class="diagram-node controller">Deployment api<br><small>replicas: 3</small></span><span class="diagram-arrow">→</span><span class="diagram-stack horizontal"><span class="diagram-node api">API 1</span><span class="diagram-node api">API 2</span><span class="diagram-node api">API 3</span></span><span class="diagram-arrow">←</span><span class="diagram-node service">Service api<br><small>3 endpointy</small></span></div></figure>
+<ol><li>Obserwuj Pody w jednym terminalu.</li><li>Usuń jeden Pod API i zmierz czas odtworzenia.</li><li>Przeskaluj API do trzech replik.</li><li>Sprawdź endpoints Service oraz odpowiedzi aplikacji.</li></ol>
+<pre><code class="language-powershell">kubectl get pods -w
+kubectl delete pod POD_API
+kubectl scale deployment/api --replicas=3
+kubectl get pods -l app=api
+kubectl get endpointslice -l kubernetes.io/service-name=api</code></pre>
+<div class="callout"><strong>Wyjaśnij:</strong> Deployment odtwarza liczbę replik. Service odnajduje gotowe Pody przez selektor. Samo skalowanie bazy danych w ten sposób byłoby błędne.</div>
+</section>
+
+<section id="zadanie-11" data-task="11"><span class="task-level">Wersje</span><h2>Zadanie 11 — rollout i kontrolowany błąd</h2>
+<figure class="lab-diagram"><figcaption>Nieudana nowa wersja nie zastępuje działających replik; rollback przywraca deklarację</figcaption><div class="diagram-flow"><span class="diagram-stack horizontal"><span class="diagram-node api">1.0.0 ✓</span><span class="diagram-node api">1.0.0 ✓</span><span class="diagram-node api">1.0.0 ✓</span></span><span class="diagram-arrow">+</span><span class="diagram-node removed">1.1.0-broken<br><small>ErrImageNeverPull</small></span><span class="diagram-arrow">→ rollback →</span><span class="diagram-node controller">1.0.0<br><small>3/3 Ready</small></span></div></figure>
+<ol><li>Zapisz stan początkowy oraz historię Deployment API.</li><li>Ustaw nieistniejący tag <code>1.1.0-broken</code>.</li><li>Zaobserwuj, że nowe Pody nie startują, a gotowe repliki pozostają w ruchu.</li><li>Znajdź przyczynę w <code>describe</code> i Events.</li><li>Wykonaj rollback i potwierdź powrót do zdrowego stanu.</li></ol>
+<pre><code class="language-powershell">kubectl rollout history deployment/api
+kubectl set image deployment/api api=mission-control-api:1.1.0-broken
+kubectl rollout status deployment/api --timeout=60s
+kubectl get pods
+kubectl describe deployment api
+kubectl rollout undo deployment/api
+kubectl rollout status deployment/api</code></pre>
+<p>Oczekiwany błąd to problem pobrania lokalnie nieistniejącego obrazu. Nie zmieniaj <code>imagePullPolicy</code>, aby „naprawić” eksperyment.</p>
+</section>
+
+<section id="zadanie-12" data-task="12"><span class="task-level">Diagnostyka</span><h2>Zadanie 12 — obserwacja i bezpieczne sprzątanie</h2>
+<figure class="lab-diagram"><figcaption>Diagnoza przechodzi od szerokiego obrazu do konkretnej przyczyny</figcaption><div class="diagram-flow"><span class="diagram-node inspect">get<br><small>stan</small></span><span class="diagram-arrow">→</span><span class="diagram-node inspect">describe<br><small>Events</small></span><span class="diagram-arrow">→</span><span class="diagram-node inspect">logs<br><small>proces</small></span><span class="diagram-arrow">→</span><span class="diagram-node inspect">config<br><small>manifest</small></span><span class="diagram-arrow">→</span><span class="diagram-node removed">delete namespace<br><small>tylko laboratorium</small></span></div></figure>
+<p>Przećwicz diagnozę bez zgadywania: stan → opis → zdarzenia → logi → konfiguracja.</p>
+<pre><code class="language-powershell">kubectl get all
+kubectl get pods -o wide
+kubectl describe pod POD
+kubectl logs POD --previous
+kubectl get events --sort-by=.lastTimestamp
+kubectl get configmap,secret,pvc,ingress</code></pre>
+<p>Na końcu usuń wyłącznie Namespace laboratorium. To usuwa także namespaced PVC i może usunąć dane zależnie od polityki StorageClass.</p>
+<pre><code class="language-powershell">kubectl config current-context
+kubectl delete namespace mission-control
+kubectl get namespace mission-control
+docker image ls mission-control-*</code></pre>
+<div class="callout warning"><strong>Przed usunięciem:</strong> pokaż prowadzącemu działającą aplikację i dowody z zadań 9–11. Nie usuwaj innych namespace ani globalnych zasobów Rancher Desktop.</div>
+</section>
+
+<section id="weryfikacja"><h2>Oddanie i kryteria ukończenia</h2>
+<p>Oddaj repozytorium z aplikacją, Compose i własnym katalogiem <code>k8s/</code>. Do README dopisz tabelę: zadanie, wykonane polecenie, oczekiwany rezultat, zaobserwowany rezultat.</p>
+<ul class="checklist"><li>Compose nadal uruchamia bazę, API i frontend.</li><li>Namespace grupuje wszystkie zasoby laboratorium.</li><li>ConfigMap i Secret oddzielają konfigurację od obrazu.</li><li>MySQL ma Service, jedną replikę i Bound PVC.</li><li>API i frontend mają Deployment, ClusterIP Service, probes oraz resources.</li><li>Lokalne obrazy używają jawnych tagów i <code>imagePullPolicy: Never</code>.</li><li>Frontend wywołuje API po DNS Service, a API łączy się z bazą po <code>db:3306</code>.</li><li>Działa Ingress albo udokumentowany port-forward wraz z diagnozą Ingress.</li><li>Rekord przetrwał wymianę Poda bazy.</li><li>Pokazano self-healing, skalowanie, nieudany rollout i rollback.</li><li>Manifesty przechodzą <code>kubectl apply --dry-run=client -f k8s/</code>.</li><li>W repozytorium nie ma prawdziwych sekretów, wyników builda ani node_modules.</li></ul>
+</section>
+
+<section id="diagnostyka"><h2>Ściąga diagnostyczna</h2>
+<table><tr><th>Objaw</th><th>Sprawdź</th></tr>
+<tr><td><code>ErrImageNeverPull</code></td><td>Tag obrazu w Dockerze, runtime dockerd i dokładną nazwę w Deployment.</td></tr>
+<tr><td><code>CrashLoopBackOff</code> API</td><td>Connection string, DNS <code>db</code>, Secret, log bieżący i <code>--previous</code>.</td></tr>
+<tr><td>Pod bazy Pending</td><td>PVC, StorageClass, Events i requests zasobów.</td></tr>
+<tr><td>API Ready 0/2</td><td><code>/health</code>, port sondy, stan bazy i initialDelay/startup.</td></tr>
+<tr><td>Frontend 502</td><td>Service <code>api</code>, endpointy, port 8080 i log nginx.</td></tr>
+<tr><td>Ingress 404</td><td>IngressClass, host nagłówka, regułę, adres i log kontrolera.</td></tr>
+<tr><td>Zmiana ConfigMap nie działa</td><td>Zmienne env są odczytywane przy starcie — wykonaj kontrolowany restart Deployment.</td></tr></table>
+</section>
+
+<section id="pytania"><h2>Pytania do samokontroli</h2><ol class="self-check">
+<li>Dlaczego API używa hosta <code>db</code>, a nie localhost?<details><summary>Odpowiedź</summary><p>Każdy Pod ma własną przestrzeń sieciową. Nazwa Service <code>db</code> jest rozwiązywana przez DNS klastra do stabilnego adresu usługi bazy.</p></details></li>
+<li>Dlaczego <code>depends_on</code> nie ma bezpośredniego odpowiednika?<details><summary>Odpowiedź</summary><p>Kubernetes stale uzgadnia stan, a Pody mogą być odtwarzane w dowolnej kolejności. Gotowość opisują sondy, a aplikacja powinna ponawiać zależności.</p></details></li>
+<li>Czym różni się ConfigMap od Secret?<details><summary>Odpowiedź</summary><p>Oba dostarczają konfigurację. Secret ma osobny typ, kontrolę dostępu i może korzystać z szyfrowania w etcd, lecz Base64 samo nie zapewnia poufności.</p></details></li>
+<li>Dlaczego PVC nie jest backupem?<details><summary>Odpowiedź</summary><p>Wolumen utrzymuje dane poza Podem, ale błąd aplikacji, usunięcie wolumenu lub awaria storage nadal może je zniszczyć. Backup ma osobną kopię i procedurę odtwarzania.</p></details></li>
+<li>Co robi readiness, a co liveness?<details><summary>Odpowiedź</summary><p>Readiness decyduje o kierowaniu ruchu. Liveness może spowodować restart kontenera, gdy proces nie odzyskuje sprawności.</p></details></li>
+<li>Dlaczego Service nie wskazuje Podów po nazwie?<details><summary>Odpowiedź</summary><p>Pody są wymienne. Service wybiera dynamiczny zbiór gotowych Podów przez etykiety i selektor.</p></details></li>
+</ol><p><a class="button" href="../../index.html">Powrót do kursu</a></p></section>
+</article></main>
+<footer class="footer"><div class="shell">TDO · Laboratorium 03 · Kubernetes · <a href="../../index.html">Powrót do kursu</a></div></footer>
+<script src="../../assets/js/site.js"></script><script src="../ci/lab.js"></script>
+</body></html>

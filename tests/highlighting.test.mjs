@@ -356,7 +356,7 @@ test('missing and unknown languages cause explicit build failures', async () => 
 });
 
 test('every code block in both source presentations is annotated and keeps its content', async () => {
-  for (const relative of ['lectures/docker/index.html', 'lectures/ci/index.html']) {
+  for (const relative of ['lectures/docker/index.html', 'lectures/ci/index.html', 'lectures/kubernetes/index.html']) {
     const source = await readFile(new URL(`../${relative}`, import.meta.url), 'utf8');
     const result = await highlightSlides(source, highlighter, relative);
     const sourceCodes = nodes(parse(source)).filter((node) => node.tagName === 'code');

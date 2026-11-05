@@ -178,7 +178,7 @@ export async function buildSite() {
         throw new Error(`Refusing to publish a non-file entry: ${relative}`);
       }
       await mkdir(dirname(destination), { recursive: true });
-      if ((relative.startsWith('lectures/') || relative.startsWith('labs/ci/'))
+      if ((relative.startsWith('lectures/') || relative.startsWith('labs/ci/') || relative.startsWith('labs/kubernetes/'))
           && relative.endsWith('.html')) {
         const result = await highlightSlides(await readFile(source, 'utf8'), highlighter, relative);
         await writeFile(destination, result.html);

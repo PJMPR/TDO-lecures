@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hello-k8s-config
+  namespace: k8s-demo
+data:
+  APP_MESSAGE: "Witaj z klastra Kubernetes!"

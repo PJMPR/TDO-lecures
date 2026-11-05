@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Wprowadzenie do Kubernetes: architektura, obiekty, deployment i lokalne demo Spring Boot."><title>Kubernetes · Technologie DevOps</title><link rel="stylesheet" href="slides.css"><link rel="stylesheet" href="../../assets/css/presentations.css"><link rel="stylesheet" href="../../assets/css/code-highlighting.css"></head>
+<body><main class="deck" aria-label="Wykład 03 — Wprowadzenie do Kubernetes">
+<section class="slide" data-title="Kubernetes"><div class="content"><div class="kicker">Technologie DevOps // Wykład 03</div><h1><span class="accent">Kubernetes</span></h1><p>Od obrazu kontenera do odpornej, skalowalnej aplikacji — deklaratywnie i powtarzalnie.</p></div></section>
+<section class="slide" data-title="Problem orkiestracji"><div class="content"><div class="kicker">Gdy jeden kontener nie wystarcza</div><h2>Kontener uruchomić łatwo. System — trudniej.</h2><div class="three"><div class="panel"><h3>Awaria</h3><p>Kto odtworzy proces lub host?</p></div><div class="panel"><h3>Skala</h3><p>Kto uruchomi repliki i rozdzieli ruch?</p></div><div class="panel"><h3>Zmiana</h3><p>Jak wymienić wersję bez przestoju?</p></div></div></div></section>
+<section class="slide" data-title="Czym jest Kubernetes"><div class="content"><div class="kicker">Definicja</div><h2>Platforma orkiestracji kontenerów</h2><p>Utrzymuje zadeklarowany stan aplikacji w klastrze: rozmieszcza workloady, odtwarza je po awarii, udostępnia w sieci i przeprowadza kontrolowane aktualizacje.</p><p class="note">K8s nie buduje aplikacji ani obrazu. Zarządza uruchomieniem gotowych obrazów.</p></div></section>
+<section class="slide" data-title="Deklaratywny model"><div class="content"><div class="kicker">Model mentalny</div><h2>Opisujesz cel, kontrolery domykają różnicę</h2><div class="flow"><div class="node">desired state<br><small>YAML / API</small></div><div class="arrow">↔</div><div class="node">controller loop</div><div class="arrow">↔</div><div class="node">actual state<br><small>klaster</small></div></div><p><code>replicas: 3</code> oznacza „utrzymuj trzy”, nie „uruchom trzy raz”.</p></div></section>
+<section class="slide" data-title="Jak działa kontroler"><div class="content"><div class="kicker">Mechanizm wykonawczy Kubernetes</div><h2>Kontroler stale uzgadnia jeden fragment stanu</h2><p>Obserwuje wybrany rodzaj obiektów API i dąży do rezultatu zapisanego w ich <code>spec</code>.</p><div class="flow"><div class="node">obserwuj API</div><div class="arrow">→</div><div class="node">porównaj stany</div><div class="arrow">→</div><div class="node">wykonaj zmianę</div><div class="arrow">↺</div></div><p class="note">To stale działający proces uzgadniania, a nie pojedyncza komenda ani człowiek-administrator.</p></div></section>
+<section class="slide" data-title="Rodzaje kontrolerów"><div class="content"><div class="kicker">Ten sam mechanizm, różne odpowiedzialności</div><h2>Kontroler, operator i Ingress Controller</h2><div class="three"><div class="panel"><h3>Kontroler</h3><p>Wbudowana pętla pilnująca konkretnego stanu, np. liczby replik.</p></div><div class="panel"><h3>Operator</h3><p>Niestandardowy kontroler z wiedzą operacyjną o konkretnej aplikacji.</p></div><div class="panel"><h3>Ingress Controller</h3><p>Odczytuje reguły Ingress i konfiguruje obsługę ruchu HTTP.</p></div></div><p class="note">Każdy operator jest kontrolerem, ale nie każdy kontroler jest operatorem.</p></div></section>
+<section class="slide" data-title="Kubernetes w deployment pipeline"><div class="content"><div class="kicker">CI/CD</div><h2>Środowisko wykonawcze deploymentu</h2><div class="flow"><div class="node">commit</div><div class="arrow">→</div><div class="node">CI: test</div><div class="arrow">→</div><div class="node">image</div><div class="arrow">→</div><div class="node">registry</div><div class="arrow">→</div><div class="node accent-border">Kubernetes</div></div><p>CD zmienia deklarację wersji obrazu. Kubernetes wykonuje rollout i utrzymuje wynik.</p></div></section>
+<section class="slide" data-title="Podstawowe funkcje"><div class="content"><div class="kicker">Co automatyzuje?</div><div class="three"><div class="panel"><h3>Scheduling</h3><p>Wybór noda.</p></div><div class="panel"><h3>Self-healing</h3><p>Odtwarzanie Podów.</p></div><div class="panel"><h3>Service discovery</h3><p>Stały DNS.</p></div><div class="panel"><h3>Scaling</h3><p>Liczba replik.</p></div><div class="panel"><h3>Rollout</h3><p>Wymiana wersji.</p></div><div class="panel"><h3>Configuration</h3><p>ConfigMap i Secret.</p></div></div></div></section>
+<section class="slide" data-title="Architektura klastra"><div class="content"><div class="kicker">Control plane i worker nodes</div><h2>Decyzje i wykonanie</h2><div class="architecture"><div><h3>Control plane</h3><span>kube-apiserver</span><span>etcd</span><span>scheduler</span><span>controller-manager</span></div><div><h3>Worker node</h3><span>kubelet</span><span>container runtime</span><span>sieć klastra</span><span>Pody aplikacji</span></div></div></div></section>
+<section class="slide" data-title="Komponenty control plane"><div class="content"><div class="kicker">Jak to współpracuje?</div><ul><li><strong>API Server</strong> — uwierzytelnia, autoryzuje i waliduje żądania.</li><li><strong>etcd</strong> — przechowuje stan klastra.</li><li><strong>Scheduler</strong> — wybiera node dla Poda.</li><li><strong>Kontrolery</strong> — uzgadniają stan rzeczywisty z deklaracją.</li><li><strong>kubelet</strong> — na nodzie doprowadza Pody do działania.</li></ul><div class="command-goal"><strong>Cel poleceń</strong><span>Sprawdzić nody klastra, poznać dostępne typy zasobów i podejrzeć dokumentację pola <code>Deployment.spec</code>.</span></div><pre><code class="language-bash">kubectl get nodes
+kubectl api-resources
+kubectl explain deployment.spec</code></pre></div></section>
+<section class="slide" data-title="Anatomia manifestu"><div class="content"><div class="kicker">Obiekt API</div><pre><code class="language-yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-config
+  namespace: k8s-demo
+data:
+  APP_MESSAGE: "Witaj!"</code></pre><div class="flow config-effect"><div class="node">ConfigMap<br><small>demo-config</small></div><div class="arrow">→ udostępnia →</div><div class="node">APP_MESSAGE<br><small>Witaj!</small></div><div class="arrow">→</div><div class="node">kontener aplikacji</div></div></div></section>
+<section class="slide" data-title="Namespace"><div class="content"><div class="kicker">Logiczna przestrzeń zasobów</div><h2>Namespace porządkuje nazwy i dostęp</h2><div class="two"><pre><code class="language-yaml">apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-demo
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: k8s-demo</code></pre><div><p>Najpierw tworzymy Namespace, a następnie przypisujemy do niego zasoby polem <code>metadata.namespace</code>.</p><p class="note">Namespace pomaga grupować zasoby i stosować RBAC, limity oraz polityki. Sam nie jest pełną granicą bezpieczeństwa ani osobnym klastrem.</p></div></div><div class="flow config-effect"><div class="node">Namespace<br><small>k8s-demo</small></div><div class="arrow">zawiera →</div><div class="node">Deployment</div><div class="node">Service</div><div class="node">ConfigMap</div></div></div></section>
+<section class="slide" data-title="Pod"><div class="content"><div class="kicker">Najmniejsza jednostka wdrożenia</div><h2>Pod opakowuje kontenery</h2><ul><li>wspólny adres IP, porty i wolumeny,</li><li>wspólny cykl życia i node,</li><li>efemeryczna nazwa i adres IP.</li></ul><p class="warning">Zwykle nie tworzymy Poda bezpośrednio. Robi to Deployment.</p></div></section>
+<section class="slide" data-title="Deployment"><div class="content"><div class="kicker">Workload stateless</div><h2>Wersja, repliki i rollout</h2><div class="object-chain config-effect"><div class="node">Deployment</div><div class="arrow">→</div><div class="node">ReplicaSet</div><div class="arrow">→</div><div class="node">Pod × N</div></div><pre><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata: {name: hello-k8s}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: hello-k8s}
+  template:
+    metadata:
+      labels: {app: hello-k8s}
+    spec:
+      containers:
+        - name: app
+          image: hello-k8s:1.0.0</code></pre></div></section>
+<section class="slide" data-title="Labels i selektory"><div class="content"><div class="kicker">Luźne powiązania</div><h2>Labels opisują. Selektory wybierają.</h2><p>Deployment i Service nie przechowują listy Podów. Wyszukują je po etykietach, np. <code>app=hello-k8s</code>.</p><div class="flow"><div class="node">Service<br><small>selector</small></div><div class="arrow">→</div><div class="node">Pod A<br><small>app=hello-k8s</small></div><div class="node">Pod B<br><small>app=hello-k8s</small></div></div></div></section>
+<section class="slide" data-title="Service"><div class="content"><div class="kicker">Stabilny adres</div><h2>Service oddziela klientów od Podów</h2><pre><code class="language-yaml">apiVersion: v1
+kind: Service
+metadata: {name: hello-k8s}
+spec:
+  selector: {app: hello-k8s}
+  ports:
+    - port: 80
+      targetPort: 8080</code></pre><div class="flow config-effect"><div class="node">klient<br><small>Service :80</small></div><div class="arrow">→ selector →</div><div class="node">Pod A<br><small>app=hello-k8s :8080</small></div><div class="node">Pod B<br><small>app=hello-k8s :8080</small></div></div></div></section>
+<section class="slide" data-title="Ingress"><div class="content"><div class="kicker">HTTP na wejściu</div><h2>Host i ścieżka → Service</h2><div class="flow"><div class="node">hello.local/api</div><div class="arrow">→</div><div class="node">Ingress Controller</div><div class="arrow">→</div><div class="node">Service</div><div class="arrow">→</div><div class="node">Pod</div></div><p class="warning">Obiekt Ingress wymaga działającego Ingress Controllera. Rancher Desktop może dostarczać Traefik, zależnie od konfiguracji.</p></div></section>
+<section class="slide" data-title="Konfiguracja Ingress"><div class="content"><div class="kicker">Manifest YAML</div><h2>Reguła HTTP prowadzi do Service</h2><pre><code class="language-yaml">apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello-k8s
+  namespace: k8s-demo
+spec:
+  rules:
+    - host: hello.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hello-k8s
+                port:
+                  number: 80</code></pre><div class="flow config-effect"><div class="node">GET /<br><small>Host: hello.local</small></div><div class="arrow">→ reguła →</div><div class="node">Ingress</div><div class="arrow">→ backend →</div><div class="node">hello-k8s:80</div></div><p class="note">Lokalnie nazwa <code>hello.local</code> musi wskazywać adres Ingress Controllera.</p></div></section>
+<section class="slide" data-title="ConfigMap i Secret"><div class="content"><div class="kicker">Konfiguracja poza obrazem</div><div class="two"><div class="panel"><h3>ConfigMap</h3><p>Niewrażliwe ustawienia.</p></div><div class="panel"><h3>Secret</h3><p>Dane wrażliwe. Base64 to kodowanie, nie szyfrowanie.</p></div></div><p>W produkcji potrzebne są RBAC, szyfrowanie etcd i często zewnętrzny menedżer sekretów.</p></div></section>
+<section class="slide" data-title="Probes"><div class="content"><div class="kicker">Czy proces naprawdę działa?</div><div class="three"><div class="panel"><h3>startup</h3><p>Czy zdążył się uruchomić?</p></div><div class="panel"><h3>readiness</h3><p>Czy może przyjmować ruch?</p></div><div class="panel"><h3>liveness</h3><p>Czy wymaga restartu?</p></div></div><p class="note">Readiness usuwa endpoint z ruchu. Liveness może zrestartować kontener.</p></div></section>
+<section class="slide" data-title="Zasoby i skalowanie"><div class="content"><div class="kicker">CPU i pamięć</div><pre><code class="language-yaml">resources:
+  requests: {cpu: 100m, memory: 128Mi}
+  limits: {cpu: 500m, memory: 256Mi}</code></pre><div class="flow config-effect config-effect--compact"><div class="node">requests</div><div class="arrow">→ scheduler rezerwuje →</div><div class="node">Pod</div><div class="arrow">← runtime ogranicza ←</div><div class="node">limits</div></div><div class="command-goal"><strong>Cel poleceń</strong><span>Zwiększyć liczbę replik aplikacji do trzech, a następnie obserwować tworzenie nowych Podów na żywo.</span></div><pre><code class="language-bash">kubectl scale deployment hello-k8s --replicas=3
+kubectl get pods -l app=hello-k8s -w</code></pre><div class="term-strip"><div class="term-card"><h3>OOM — Out Of Memory</h3><p>Kontener przekroczył limit pamięci. System może zakończyć jego proces, a Kubernetes uruchomi go ponownie.</p></div><div class="term-card"><h3>HPA — Horizontal Pod Autoscaler</h3><p>Automatycznie zwiększa lub zmniejsza liczbę Podów na podstawie metryk, np. użycia CPU.</p></div></div></div></section>
+<section class="slide" data-title="Rollout"><div class="content"><div class="kicker">Zmiana wersji</div><div class="command-goal"><strong>Cel poleceń</strong><span>Wdrożyć obraz <code>1.1.0</code>, śledzić aktualizację, sprawdzić historię, a w razie problemu wycofać ostatnią zmianę.</span></div><pre><code class="language-bash">kubectl set image deployment/hello-k8s app=hello-k8s:1.1.0
+kubectl rollout status deployment/hello-k8s
+kubectl rollout history deployment/hello-k8s
+kubectl rollout undo deployment/hello-k8s</code></pre><p>Readiness probe decyduje, kiedy nowa replika może wejść do ruchu.</p></div></section>
+<section class="slide" data-title="Dane i inne workloady"><div class="content"><div class="kicker">Nie tylko Deployment</div><div class="three"><div class="panel"><h3>StatefulSet</h3><p>Tożsamość i wolumeny replik.</p></div><div class="panel"><h3>DaemonSet</h3><p>Pod na każdym wybranym nodzie.</p></div><div class="panel"><h3>Job / CronJob</h3><p>Zadanie jednorazowe lub cykliczne.</p></div></div><div class="term-card term-card--wide"><h3>PVC — PersistentVolumeClaim</h3><p>Żądanie trwałego miejsca na dane. Pod montuje wolumen przez PVC, dlatego może zostać odtworzony bez utraty danych zapisanych poza jego systemem plików.</p></div></div></section>
+<section class="slide" data-title="Diagnostyka kubectl"><div class="content"><div class="kicker">Najpierw obserwuj</div><div class="two"><div class="command-example"><div class="command-goal"><strong>Diagnoza</strong><span>Znaleźć wadliwy Pod, odczytać jego stan, logi oraz ostatnie zdarzenia klastra.</span></div><pre><code class="language-bash">kubectl get pods -o wide
+kubectl describe pod POD
+kubectl logs -f deploy/hello-k8s
+kubectl get events</code></pre></div><div class="command-example"><div class="command-goal"><strong>Działanie</strong><span>Wejść do kontenera, udostępnić usługę lokalnie, sprawdzić rollout lub usunąć zasoby manifestu.</span></div><pre><code class="language-bash">kubectl exec -it POD -- sh
+kubectl port-forward svc/hello-k8s 8080:80
+kubectl rollout status deploy/hello-k8s
+kubectl delete -f k8s/</code></pre></div></div></div></section>
+<section class="slide" data-title="Podsumowanie"><div class="content"><div class="kicker">Mapa pojęć</div><h2>Deployment utrzymuje. Service odnajduje. Ingress wpuszcza.</h2><div class="object-chain"><div class="node">image</div><div class="arrow">→</div><div class="node">Deployment</div><div class="arrow">→</div><div class="node">Pod</div><div class="arrow">←</div><div class="node">Service</div><div class="arrow">←</div><div class="node">Ingress</div></div></div></section>
+</main><footer class="hud"><a href="../../index.html" aria-label="Powrót do strony kursu">TDO</a><details class="presentation-picker"><summary>Prezentacje</summary><nav aria-label="Wybór prezentacji"><a href="../docker/index.html">01 — Docker i Compose</a><a href="../ci/index.html">02 — CI i SDLC</a><a href="../kubernetes/index.html" aria-current="page">03 — Kubernetes</a></nav></details><button type="button" data-prev aria-label="Poprzedni slajd">←</button><div class="progress"><span></span></div><button type="button" data-next aria-label="Następny slajd">→</button><span class="slide-number"></span></footer><script src="../../assets/js/presentations.js"></script><script src="../docker/slides.js"></script><script src="slides.js"></script></body></html>

@@ -1,0 +1,11 @@
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/test-results
+.git
+.github
+.idea
+.vscode
+.env
+README.md

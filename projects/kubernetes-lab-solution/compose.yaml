@@ -1,0 +1,51 @@
+name: mission-control
+
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mission_control}
+      MYSQL_USER: ${MYSQL_USER:-mission}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-mission-local-password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mission-local-root-password}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: mission-control-api:1.0.0
+    environment:
+      ConnectionStrings__MissionDb: Server=db;Port=3306;Database=${MYSQL_DATABASE:-mission_control};User=${MYSQL_USER:-mission};Password=${MYSQL_PASSWORD:-mission-local-password}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: frontend
+    image: mission-control-frontend:1.0.0
+    ports:
+      - "8088:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mysql-data:

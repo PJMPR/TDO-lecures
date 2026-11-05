@@ -1,0 +1,13 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/backend.tests/">
+    <Project Path="backend.tests/MissionControl.Api.Tests.csproj" />
+  </Folder>
+  <Folder Name="/backend/">
+    <Project Path="backend/MissionControl.Api.csproj" />
+  </Folder>
+</Solution>

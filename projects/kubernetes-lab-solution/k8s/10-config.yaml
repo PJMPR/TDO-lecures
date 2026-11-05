@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mission-config
+  namespace: mission-control
+data:
+  MYSQL_DATABASE: mission_control
+  MYSQL_USER: mission
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mission-secret
+  namespace: mission-control
+type: Opaque
+stringData:
+  MYSQL_PASSWORD: mission-local-password
+  MYSQL_ROOT_PASSWORD: mission-local-root-password
+  ConnectionStrings__MissionDb: Server=db;Port=3306;Database=mission_control;User=mission;Password=mission-local-password
+

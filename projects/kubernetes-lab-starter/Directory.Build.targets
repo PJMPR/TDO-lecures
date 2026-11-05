@@ -1,0 +1,8 @@
+<Project>
+  <Target Name="RequireNuGetLockFileInCI"
+          BeforeTargets="CollectPackageReferences;PrepareForBuild"
+          Condition="'$(CI)' == 'true'">
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)/packages.lock.json')"
+           Text="CI requires $(MSBuildProjectDirectory)/packages.lock.json. Run dotnet restore MissionControl.slnx --use-lock-file locally and commit both NuGet lockfiles." />
+  </Target>
+</Project>

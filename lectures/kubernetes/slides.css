@@ -1,0 +1,60 @@
+@import url("../docker/slides.css");
+.has-concept-help{position:relative}
+.concept-help{position:absolute;top:-.55rem;right:-.55rem;z-index:3;display:grid;place-items:center;width:2rem;height:2rem;padding:0;border:1px solid var(--cyan);border-radius:50%;color:#041018;background:var(--cyan);box-shadow:0 0 0 4px rgba(5,8,13,.86),0 0 22px rgba(103,232,249,.4);font:900 1.35rem/1 "Cascadia Code",monospace;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease}
+.concept-help:hover,.concept-help:focus-visible{transform:scale(1.12);box-shadow:0 0 0 4px rgba(5,8,13,.92),0 0 30px rgba(103,232,249,.75);outline:none}
+.concept-modal{width:min(720px,calc(100vw - 32px));max-height:calc(100vh - 32px);padding:0;border:1px solid rgba(103,232,249,.55);color:var(--text);background:linear-gradient(145deg,#111f2c,#070c12);box-shadow:0 35px 100px rgba(0,0,0,.72),0 0 45px rgba(50,108,229,.18)}
+.concept-modal::backdrop{background:rgba(1,4,8,.78);backdrop-filter:blur(7px)}
+.concept-modal__frame{position:relative;padding:clamp(1.5rem,4vw,3rem)}
+.concept-modal__close{position:absolute;top:1rem;right:1rem;width:2.25rem;height:2.25rem;border:1px solid var(--line);border-radius:50%;color:var(--text);background:#071019;font:400 1.5rem/1 sans-serif;cursor:pointer}
+.concept-modal__close:hover,.concept-modal__close:focus-visible{border-color:var(--cyan);color:var(--cyan);outline:none}
+.concept-modal__eyebrow{color:var(--cyan);font:800 .65rem/1.2 "Cascadia Code",monospace;letter-spacing:.18em;text-transform:uppercase}
+.concept-modal h3{position:relative;max-width:18ch;margin:.35em 2.5rem .7em 0;padding-bottom:.35em;color:#fff;font-size:clamp(1.8rem,5vw,3.3rem);line-height:1;letter-spacing:-.035em}
+.concept-modal h3::after{content:"";position:absolute;left:0;bottom:0;width:2.4rem;height:3px;background:linear-gradient(90deg,var(--cyan),var(--kube));box-shadow:0 0 12px rgba(103,232,249,.55)}
+.concept-modal__body{margin:0;color:#d7e7ef;font-size:clamp(1rem,2.2vw,1.25rem);line-height:1.55}
+body:has(.concept-modal[open]){overflow:hidden}
+.config-effect{position:relative;margin-top:.8rem;padding:1.8rem .7rem .65rem;border:1px solid rgba(50,108,229,.38);background:linear-gradient(90deg,rgba(50,108,229,.08),rgba(103,232,249,.04))}
+.config-effect .node{padding:.55em .75em;font-size:.76em}.config-effect .arrow{font-size:.68em}.config-effect--compact{margin-top:.55rem;padding-top:1.55rem}
+.diagram-expand{position:absolute;top:.38rem;left:.5rem;padding:.35rem .55rem;border:1px solid var(--line);color:var(--cyan);background:rgba(5,8,13,.88);font:800 .55rem/1 "Cascadia Code",monospace;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.diagram-expand:hover,.diagram-expand:focus-visible{border-color:var(--cyan);background:rgba(103,232,249,.1);outline:none}
+.diagram-modal{width:min(1000px,calc(100vw - 28px));max-width:none;padding:0;border:1px solid rgba(103,232,249,.55);color:var(--text);background:#05080d;box-shadow:0 35px 110px rgba(0,0,0,.82)}
+.diagram-modal::backdrop{background:rgba(1,4,8,.84);backdrop-filter:blur(7px)}
+.diagram-modal__frame{display:grid;grid-template-rows:auto 1fr}
+.diagram-modal__header{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.15rem;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#101c27,#071019)}
+.diagram-modal__eyebrow{color:var(--cyan);font:800 .58rem/1 "Cascadia Code",monospace;letter-spacing:.16em;text-transform:uppercase}
+.diagram-modal h3{margin:.3rem 0 0;font-size:1.35rem}
+.diagram-modal__close{display:grid;place-items:center;width:2.3rem;height:2.3rem;padding:0;border:1px solid var(--line);border-radius:50%;color:var(--text);background:#071019;font:400 1.5rem/1 sans-serif;cursor:pointer}
+.diagram-modal__close:hover,.diagram-modal__close:focus-visible{border-color:var(--cyan);color:var(--cyan);outline:none}
+.diagram-modal__content{padding:clamp(1rem,4vw,3rem)}
+.diagram-modal .diagram-preview{min-height:260px;margin:0;padding:2rem;justify-content:center;border:0;background:radial-gradient(circle at center,rgba(50,108,229,.17),transparent 70%)}
+.diagram-modal .diagram-preview .node{padding:1em 1.25em;font-size:1.05rem}.diagram-modal .diagram-preview .arrow{font-size:.9rem}
+body:has(.diagram-modal[open]){overflow:hidden}
+@media(max-width:760px){.diagram-modal .diagram-preview{min-height:0;padding:1rem}.diagram-modal .diagram-preview .node{font-size:.85rem}}
+.code-block{position:relative;margin:0}
+.command-line{position:relative;display:inline-block;min-width:100%;padding-right:2.25rem}
+.command-line__copy{position:absolute;top:50%;right:.1rem;display:grid;place-items:center;width:1.65rem;height:1.65rem;padding:0;border:1px solid transparent;border-radius:4px;color:var(--muted);background:rgba(13,22,32,.82);cursor:pointer;transform:translateY(-50%);opacity:.68;transition:opacity .15s ease,color .15s ease,border-color .15s ease}
+.command-line__copy svg{width:1rem;height:1rem;fill:currentColor}.command-line:hover .command-line__copy,.command-line__copy:focus-visible{opacity:1;border-color:var(--cyan);color:var(--cyan);outline:none}.command-line__copy.copied{opacity:1;border-color:var(--orange);color:var(--orange)}
+.code-block>pre{margin:0;padding-top:3.25rem}
+.code-block__actions{position:absolute;top:.65rem;right:.7rem;z-index:2;display:flex;gap:.45rem}
+.code-action,.code-modal__copy{padding:.55rem .75rem;border:1px solid var(--line);color:var(--text);background:rgba(13,22,32,.96);font:800 .64rem/1 "Cascadia Code",monospace;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.code-action:hover,.code-action:focus-visible,.code-modal__copy:hover,.code-modal__copy:focus-visible{border-color:var(--cyan);color:var(--cyan);outline:none}
+.code-action.copied,.code-modal__copy.copied{border-color:var(--orange);color:var(--orange)}
+.code-modal{width:min(1100px,calc(100vw - 28px));height:min(800px,calc(100vh - 28px));max-width:none;max-height:none;padding:0;border:1px solid rgba(103,232,249,.55);color:var(--text);background:#05080d;box-shadow:0 35px 110px rgba(0,0,0,.82)}
+.code-modal::backdrop{background:rgba(1,4,8,.84);backdrop-filter:blur(7px)}
+.code-modal__frame{display:grid;grid-template-rows:auto minmax(0,1fr);height:100%}
+.code-modal__header{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.15rem;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#101c27,#071019)}
+.code-modal__eyebrow{color:var(--cyan);font:800 .58rem/1 "Cascadia Code",monospace;letter-spacing:.16em;text-transform:uppercase}
+.code-modal h3{margin:.3rem 0 0;font:800 1.1rem/1.1 "Cascadia Code",monospace;letter-spacing:.04em}
+.code-modal__actions{display:flex;align-items:center;gap:.6rem}
+.code-modal__close{display:grid;place-items:center;width:2.3rem;height:2.3rem;padding:0;border:1px solid var(--line);border-radius:50%;color:var(--text);background:#071019;font:400 1.5rem/1 sans-serif;cursor:pointer}
+.code-modal__close:hover,.code-modal__close:focus-visible{border-color:var(--cyan);color:var(--cyan);outline:none}
+.code-modal__content{min-height:0;overflow:auto;padding:1rem}
+.code-modal__content pre{max-height:none;min-height:100%;margin:0;padding:1.25rem;font-size:clamp(.82rem,1.25vw,1.05rem);white-space:pre;overflow:visible}
+body:has(.code-modal[open]){overflow:hidden}
+@media(max-width:760px){.code-block>pre{padding-top:3.6rem}.code-block__actions{top:.55rem;right:.55rem}.code-action{padding:.5rem .6rem}.code-modal__header{align-items:flex-start}.code-modal__content{padding:.5rem}}
+@media(max-width:760px){.concept-help{top:.35rem;right:.35rem}.concept-modal__frame{padding:1.5rem}.concept-modal h3{font-size:2rem}}
+:root{--cyan:#67e8f9;--orange:#a3e635;--kube:#326ce5}
+body{background:radial-gradient(circle at 78% 8%,rgba(50,108,229,.24),transparent 34%),linear-gradient(rgba(103,232,249,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(103,232,249,.025) 1px,transparent 1px),#05080d;background-size:auto,44px 44px,44px 44px,auto}
+.architecture{display:grid;grid-template-columns:1fr 1fr;gap:24px}.architecture>div{padding:1em;border:1px solid var(--line);background:rgba(13,22,32,.86)}.architecture h3{color:var(--cyan)}.architecture span{display:block;margin:8px 0;padding:.5em;border-left:3px solid var(--kube);background:rgba(50,108,229,.12)}.object-chain{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}.warning{border-left:4px solid #f87171;background:rgba(248,113,113,.08);padding:.75em 1em;color:#fecaca}@media(max-width:760px){.architecture{grid-template-columns:1fr}.object-chain{justify-content:flex-start}}
+.term-strip{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:1rem}.term-card{position:relative;padding:.7rem 2.7rem .7rem .85rem;border:1px solid var(--line);background:rgba(13,22,32,.88)}.term-card h3{margin:0 0 .3rem;color:var(--cyan);font-size:.72em}.term-card p{margin:0;color:var(--muted);font-size:.65em;line-height:1.35}@media(max-width:760px){.term-strip{grid-template-columns:1fr}}
+.term-card--wide{margin-top:1rem}
+.command-goal{display:flex;align-items:flex-start;gap:.75rem;margin:.55rem 0;padding:.55rem .7rem;border-left:3px solid var(--orange);background:rgba(163,230,53,.07);font-size:.62em;line-height:1.4}.command-goal strong{flex:none;color:var(--orange);font:800 .9em/1.4 "Cascadia Code",monospace;letter-spacing:.08em;text-transform:uppercase}.command-goal span{color:#d7e7ef}.command-example{min-width:0}.command-example .code-block,.command-example pre{width:100%}@media(max-width:760px){.command-goal{flex-direction:column;gap:.3rem}}
