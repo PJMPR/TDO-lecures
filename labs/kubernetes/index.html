@@ -18,7 +18,7 @@
 </nav></header>
 <main class="shell doc-layout">
 <aside class="toc"><details class="toc-fold" data-lab-toc open><summary>Plan laboratorium</summary><nav aria-label="Spis treści">
-  <a href="#cel">Cel i architektura</a><a href="#przygotowanie">Przygotowanie</a><a href="#starter">Starter</a>
+  <a href="#cel">Cel i architektura</a><a href="#przygotowanie">Przygotowanie</a><a href="#rancher-check">Kontrola Rancher Desktop</a><a href="#starter">Starter</a>
   <p class="toc-group">Migracja do klastra</p>
   <a href="#zadanie-01">1. Punkt odniesienia Compose</a><a href="#zadanie-02">2. Obrazy i klaster</a><a href="#zadanie-03">3. Namespace</a><a href="#zadanie-04">4. ConfigMap i Secret</a><a href="#zadanie-05">5. MySQL i PVC</a><a href="#zadanie-06">6. API</a><a href="#zadanie-07">7. Frontend</a><a href="#zadanie-08">8. Ingress</a>
   <p class="toc-group">Eksploatacja</p>
@@ -47,6 +47,33 @@ kubectl get storageclass
 kubectl get ingressclass</code></pre>
 <p>Oczekujesz aktywnego lokalnego kontekstu Rancher Desktop, noda w stanie <code>Ready</code>, domyślnej StorageClass i — jeśli chcesz wykonać Ingress — zainstalowanego kontrolera.</p>
 <div class="callout warning"><strong>Nie pracuj na przypadkowym klastrze:</strong> przed każdym usuwaniem sprawdź <code>kubectl config current-context</code>. Instrukcja zakłada wyłącznie lokalny klaster.</div>
+</section>
+
+<section id="rancher-check"><h2>Co sprawdzić w Rancher Desktop i lokalnym klastrze?</h2>
+<p>Rancher Desktop uruchamia na laptopie zarówno silnik kontenerów, jak i lokalny Kubernetes. Zielony status aplikacji nie oznacza jeszcze, że wszystkie zasoby Mission Control działają. Najpierw sprawdź środowisko, a później obserwuj obiekty utworzone przez własne manifesty.</p>
+<figure class="lab-diagram"><figcaption>Dwie warstwy kontroli środowiska laboratoryjnego</figcaption><div class="diagram-flow"><span class="diagram-node cluster">Rancher Desktop<br><small>silnik, Kubernetes, zasoby laptopa</small></span><span class="diagram-arrow">→</span><span class="diagram-node controller">lokalny klaster<br><small>node, storage, DNS, Traefik</small></span><span class="diagram-arrow">→</span><span class="diagram-node api">Mission Control<br><small>Pody, Service, PVC, Ingress</small></span></div></figure>
+
+<h3>1. W aplikacji Rancher Desktop</h3>
+<ul class="checklist"><li><strong>Kubernetes jest włączony</strong> i ma stan Running. Po restarcie lub aktualizacji poczekaj, aż inicjalizacja się zakończy.</li><li><strong>Container engine to dockerd (moby)</strong>. Laboratorium zakłada, że obrazy zbudowane poleceniem <code>docker compose</code> są dostępne także dla lokalnego klastra.</li><li><strong>Przydzielono wystarczające zasoby</strong> — zalecane minimum dla ćwiczenia to 6 GB pamięci. Zbyt mała ilość pamięci może powodować restarty i Pody w stanie Pending.</li><li><strong>Obrazy lokalne istnieją</strong>: po wykonaniu zadania 1 powinny być widoczne tagi <code>mission-control-api:1.0.0</code> oraz <code>mission-control-frontend:1.0.0</code>.</li><li><strong>Nie trwa reset ani aktualizacja klastra</strong>. Reset Kubernetes usuwa zasoby laboratoryjne i może usunąć dane z lokalnego storage.</li></ul>
+
+<h3>2. Przed zastosowaniem manifestów</h3>
+<pre><code class="language-powershell">kubectl config current-context
+kubectl cluster-info
+kubectl get nodes -o wide
+kubectl get storageclass
+kubectl get ingressclass
+kubectl get pods -n kube-system</code></pre>
+<table><tr><th>Sprawdzenie</th><th>Oczekiwany wynik</th><th>Dlaczego jest ważne?</th></tr><tr><td>Kontekst</td><td><code>rancher-desktop</code></td><td>Chroni przed wykonaniem ćwiczenia na przypadkowym klastrze.</td></tr><tr><td>Node</td><td><code>Ready</code></td><td>Scheduler może uruchamiać Pody.</td></tr><tr><td>StorageClass</td><td>jedna klasa oznaczona jako domyślna</td><td>PVC MySQL może automatycznie otrzymać wolumen.</td></tr><tr><td>Systemowe Pody</td><td>DNS, storage i kontrolery są Running/Ready</td><td>Aplikacja potrzebuje DNS Service i lokalnego storage.</td></tr><tr><td>IngressClass</td><td>działający <code>traefik</code> lub klasa wskazana przez prowadzącego</td><td>Sam manifest Ingress nie obsługuje ruchu bez kontrolera.</td></tr></table>
+
+<h3>3. Co obserwować podczas wykonywania zadań?</h3>
+<pre><code class="language-powershell">kubectl get pods -n mission-control -o wide
+kubectl get deployment,service -n mission-control
+kubectl get endpointslice -n mission-control
+kubectl get pvc -n mission-control
+kubectl get ingress -n mission-control
+kubectl get events -n mission-control --sort-by=.lastTimestamp</code></pre>
+<ul><li><strong>READY</strong> — liczba gotowych kontenerów, np. <code>1/1</code>. Sam stan Running nie gwarantuje gotowości do obsługi ruchu.</li><li><strong>RESTARTS</strong> — rosnąca wartość może oznaczać błąd aplikacji, sondy lub brak pamięci.</li><li><strong>Service i EndpointSlice</strong> — Service bez endpointów nie ma gotowych Podów, do których może wysłać żądanie.</li><li><strong>PVC</strong> — przed uruchomieniem API sprawdź, czy wolumen bazy ma stan <code>Bound</code>.</li><li><strong>Events</strong> — tutaj najczęściej znajdziesz przyczynę <code>Pending</code>, błędnego obrazu, niedziałającej sondy lub problemu z wolumenem.</li></ul>
+<div class="callout warning"><strong>Nie naprawiaj przez reset klastra:</strong> najpierw użyj <code>get</code>, <code>describe</code>, Events i logów. Reset Rancher Desktop usuwa objawy razem ze środowiskiem, ale nie wyjaśnia przyczyny błędu i może skasować wyniki ćwiczenia.</div>
 </section>
 
 <section id="starter"><h2>Projekt startowy</h2>
