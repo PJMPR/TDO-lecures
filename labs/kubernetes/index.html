@@ -102,6 +102,7 @@ docker compose ps
 curl.exe http://localhost:8088/health
 curl.exe http://localhost:8088/api/missions</code></pre>
 <div class="callout"><strong>Sprawdź:</strong> trzy usługi są uruchomione, db i api są healthy, a frontend jest dostępny na <code>http://localhost:8088</code>. Nie przechodź dalej, jeśli rozwiązanie bazowe nie działa.</div>
+<div class="rancher-observe"><h3>Sprawdź w Rancher Desktop</h3><ol><li>Otwórz widok <strong>Containers</strong>.</li><li>Znajdź grupę utworzoną przez Docker Compose dla Mission Control.</li><li>Rozwiń ją i potwierdź obecność kontenerów <strong>db</strong>, <strong>api</strong> i <strong>frontend</strong>.</li><li>Wejdź w kontener API lub bazy: w zakładkach <strong>Logs</strong> i <strong>Stats</strong> zobaczysz logi startu oraz bieżące użycie zasobów.</li></ol><p class="rancher-expected"><strong>Oczekiwany widok:</strong> trzy uruchomione kontenery z obrazami MySQL oraz Mission Control; frontend ma opublikowany port 8088.</p></div>
 <details class="solution-reveal"><summary>Co mapujemy z Compose?</summary><table><tr><th>Compose</th><th>Kubernetes</th></tr><tr><td>db/api/frontend</td><td>workload + Service</td></tr><tr><td>environment</td><td>ConfigMap / Secret</td></tr><tr><td>healthcheck</td><td>readinessProbe / livenessProbe</td></tr><tr><td>volume</td><td>PVC</td></tr><tr><td>ports</td><td>Service / Ingress / port-forward</td></tr></table></details>
 </section>
 
@@ -114,6 +115,7 @@ docker image inspect mission-control-frontend:1.0.0
 kubectl get nodes</code></pre>
 <p>Przy dockerd obrazy zbudowane przez Docker CLI są dostępne dla lokalnego klastra. W przyszłych Deploymentach ustawisz <code>imagePullPolicy: Never</code>. Dzięki temu błąd tagu da czytelny <code>ErrImageNeverPull</code>, zamiast próby pobrania obrazu z publicznego rejestru.</p>
 <div class="callout warning"><strong>Nie używaj <code>latest</code>:</strong> zachowaj jawne tagi <code>1.0.0</code>. Umożliwią później obserwację rollout i rollback.</div>
+<div class="rancher-observe"><h3>Sprawdź w Rancher Desktop</h3><ol><li>Otwórz widok <strong>Images</strong>.</li><li>W polu filtrowania wpisz <code>mission-control</code>.</li><li>Sprawdź nazwy oraz tagi obu obrazów.</li></ol><p class="rancher-expected"><strong>Oczekiwany widok:</strong> <code>mission-control-api:1.0.0</code> i <code>mission-control-frontend:1.0.0</code>. Po zatrzymaniu Compose obrazy nadal pozostają na liście.</p></div>
 </section>
 
 <section id="zadanie-03" data-task="3"><span class="task-level">Manifesty</span><h2>Zadanie 3 — Namespace i struktura katalogu</h2>
@@ -127,6 +129,7 @@ metadata:
 kubectl get namespace mission-control
 kubectl config set-context --current --namespace=mission-control</code></pre>
 <p>Każdy kolejny namespaced manifest ma zawierać <code>metadata.namespace: mission-control</code>. Sama przestrzeń nazw nie jest osobnym klastrem ani pełną izolacją bezpieczeństwa.</p>
+<div class="rancher-observe"><h3>Sprawdź w Rancher Desktop</h3><ol><li>Otwórz <strong>Cluster Dashboard</strong> z bocznego menu Rancher Desktop.</li><li>Przejdź do listy Namespace i znajdź <code>mission-control</code>.</li><li>Ustaw <code>mission-control</code> w selektorze Namespace dashboardu. Pozostaw ten filtr aktywny w kolejnych zadaniach.</li></ol><p class="rancher-expected"><strong>Oczekiwany widok:</strong> Namespace istnieje, ale nie zawiera jeszcze workloadów aplikacji.</p></div>
 </section>
 
 <section id="zadanie-04" data-task="4"><span class="task-level">Konfiguracja</span><h2>Zadanie 4 — ConfigMap i Secret</h2>
@@ -156,6 +159,7 @@ kubectl get configmap,secret
 kubectl describe configmap mission-config
 kubectl get secret mission-secret -o jsonpath="{.data.MYSQL_PASSWORD}"</code></pre>
 <div class="callout warning"><strong>Base64 nie jest szyfrowaniem:</strong> <code>stringData</code> ułatwia ćwiczenie, ale każdy z prawem odczytu Secret może poznać wartość. Używaj wyłącznie danych lokalnych.</div>
+<div class="rancher-observe"><h3>Sprawdź w Rancher Desktop</h3><ol><li>W <strong>Cluster Dashboard</strong> wybierz Namespace <code>mission-control</code>.</li><li>Otwórz zasoby <strong>ConfigMaps</strong> i znajdź <code>mission-config</code>.</li><li>Otwórz zasoby <strong>Secrets</strong> i znajdź <code>mission-secret</code>.</li></ol><p class="rancher-expected"><strong>Oczekiwany widok:</strong> ConfigMap ma dwa klucze konfiguracyjne, a Secret trzy klucze. Dashboard może ukrywać wartości Secret — nie jest to błąd.</p></div>
 </section>
 
 <section id="zadanie-05" data-task="5"><span class="task-level">Dane</span><h2>Zadanie 5 — MySQL, Service i PVC</h2>
@@ -179,6 +183,7 @@ kubectl get pvc,pods,service
 kubectl describe pod -l app=db
 kubectl logs -l app=db --tail=100</code></pre>
 <p><strong>Sprawdź:</strong> PVC ma stan Bound, Pod bazy jest Ready, a Service ma endpoint. Nie skaluj tej prostej bazy do wielu replik — współdzielony katalog MySQL nie tworzy klastra bazy. Zwiększenie pola <code>replicas</code> nie konfiguruje replikacji MySQL i może prowadzić do konfliktów lub uszkodzenia danych.</p>
+<div class="rancher-observe"><h3>Sprawdź w Rancher Desktop</h3><ol><li>W <strong>Cluster Dashboard → Workloads</strong> otwórz Deployment <code>db</code> i jego Pod.</li><li>W sekcji storage/PVC znajdź <code>mysql-data</code>.</li><li>W sekcji Services znajdź Service <code>db</code>.</li><li>Opcjonalnie otwórz ten Pod również w widoku <strong>Containers</strong>, aby zobaczyć log startu MySQL, zmienne środowiskowe i zamontowany wolumen.</li></ol><p class="rancher-expected"><strong>Oczekiwany widok:</strong> Deployment <code>1/1</code>, Pod Running/Ready, PVC Bound oraz Service ClusterIP na porcie 3306.</p></div>
 </section>
 
 <section id="zadanie-06" data-task="6"><span class="task-level">Backend</span><h2>Zadanie 6 — Deployment i Service API</h2>
@@ -205,6 +210,7 @@ kubectl rollout status deployment/api
 kubectl get pods -l app=api -o wide
 kubectl port-forward service/api 8080:8080
 curl.exe http://localhost:8080/health</code></pre>
+<div class="rancher-observe"><h3>Sprawdź w Rancher Desktop</h3><ol><li>W <strong>Cluster Dashboard → Workloads</strong> otwórz Deployment <code>api</code>.</li><li>Sprawdź liczbę dostępnych replik oraz listę należących do niego Podów.</li><li>W sekcji Services otwórz <code>api</code> i sprawdź port 8080.</li><li>W widoku <strong>Containers</strong> otwórz jeden kontener API i zakładkę <strong>Logs</strong>.</li></ol><p class="rancher-expected"><strong>Oczekiwany widok:</strong> Deployment <code>2/2</code>, dwa gotowe Pody z obrazem <code>1.0.0</code>, Service ClusterIP i log <code>Application started</code>.</p></div>
 </section>
 
 <section id="zadanie-07" data-task="7"><span class="task-level">Frontend</span><h2>Zadanie 7 — Deployment i Service frontendu</h2>
@@ -216,6 +222,7 @@ kubectl rollout status deployment/frontend
 kubectl get deployment,replicaset,pods,service
 kubectl port-forward service/frontend 8088:80</code></pre>
 <p>Otwórz <code>http://localhost:8088</code>. Jeśli UI działa, ale <code>/api</code> zwraca 502, sprawdź nazwę Service API, port oraz logi nginx i backendu.</p>
+<div class="rancher-observe"><h3>Sprawdź w Rancher Desktop</h3><ol><li>W <strong>Cluster Dashboard → Workloads</strong> otwórz Deployment <code>frontend</code> i potwierdź dwie repliki.</li><li>W sekcji Services znajdź <code>frontend</code>.</li><li>Otwórz w Rancher Desktop widok <strong>Port Forwarding</strong>, znajdź Service <code>frontend</code>, kliknij <strong>Forward</strong> i wybierz lokalny port 8088.</li></ol><p class="rancher-expected"><strong>Oczekiwany widok:</strong> Deployment <code>2/2</code>, dwa Pody nginx, Service na porcie 80 i aktywne przekierowanie na localhost. Jeśli port-forward działa już z terminala, nie uruchamiaj drugiego na tym samym porcie.</p></div>
 </section>
 
 <section id="zadanie-08" data-task="8"><span class="task-level">Ruch HTTP</span><h2>Zadanie 8 — Ingress</h2>
@@ -270,6 +277,7 @@ curl.exe -H "Host: mission.local" http://127.0.0.1/
 curl.exe -H "Host: mission.local" http://127.0.0.1/health</code></pre>
 <div class="callout"><strong>Plan B:</strong> jeśli lokalny Ingress nie działa, uruchom <code>kubectl port-forward -n mission-control service/frontend 8088:80</code>. W tym wariancie ruch omija Traefika, a nginx frontendu obsługuje Angulara i przekazuje <code>/api</code> do Service API. Pozwala to dokończyć laboratorium bez modyfikowania globalnej konfiguracji Rancher Desktop.</div>
 <details class="solution-reveal"><summary>Co oznacza błąd webhooka nginx?</summary><p>Komunikat <code>failed calling webhook "validate.nginx.ingress.kubernetes.io"</code> z brakiem Service <code>ingress-nginx-controller-admission</code> oznacza pozostałość po niekompletnej instalacji ingress-nginx. To problem klastra, nie manifestu aplikacji ani Traefika. Nie usuwaj globalnego webhooka w ramach zadania — zapisz błąd, użyj planu B i zgłoś go prowadzącemu.</p></details>
+<div class="rancher-observe"><h3>Sprawdź w Rancher Desktop</h3><ol><li>W ustawieniach <strong>Preferences → Kubernetes</strong> potwierdź, że opcja <strong>Enable Traefik</strong> jest włączona.</li><li>W <strong>Cluster Dashboard</strong> otwórz zasoby Ingress i wybierz <code>mission-control</code>.</li><li>Sprawdź host <code>mission.local</code> oraz trzy reguły ścieżek prowadzące do Service frontend i api.</li></ol><p class="rancher-expected"><strong>Oczekiwany widok:</strong> Ingress jest aktywny i pokazuje backendy dla <code>/</code>, <code>/api</code> oraz <code>/health</code>. Jeśli obiektu nie ma po błędzie webhooka, użyj planu B i zachowaj komunikat do diagnozy.</p></div>
 </section>
 
 <section id="zadanie-09" data-task="9"><span class="task-level">Weryfikacja</span><h2>Zadanie 9 — pełny przepływ i trwałość danych</h2>
@@ -281,6 +289,7 @@ kubectl wait --for=condition=Ready pod -l app=db --timeout=180s
 kubectl get pvc
 curl.exe http://localhost:8088/api/missions</code></pre>
 <p>Deployment odtwarza Pod, a PVC ponownie montuje ten sam wolumen. To dowód trwałości tylko względem wymiany Poda — nie zastępuje backupu.</p>
+<div class="rancher-observe"><h3>Sprawdź w Rancher Desktop</h3><ol><li>Przed usunięciem zapamiętaj nazwę Poda bazy w <strong>Cluster Dashboard → Workloads</strong>.</li><li>Po usunięciu obserwuj, jak stary Pod znika, a Deployment tworzy Pod o nowej nazwie.</li><li>Otwórz PVC <code>mysql-data</code> i potwierdź, że jest to ten sam zasób Bound.</li></ol><p class="rancher-expected"><strong>Oczekiwany widok:</strong> zmienia się nazwa i wiek Poda, lecz PVC pozostaje ten sam, a Deployment wraca do <code>1/1</code>.</p></div>
 </section>
 
 <section id="zadanie-10" data-task="10"><span class="task-level">Eksploatacja</span><h2>Zadanie 10 — self-healing i skalowanie</h2>
@@ -292,6 +301,7 @@ kubectl scale deployment/api --replicas=3
 kubectl get pods -l app=api
 kubectl get endpointslice -l kubernetes.io/service-name=api</code></pre>
 <div class="callout"><strong>Wyjaśnij:</strong> Deployment odtwarza liczbę replik. Service odnajduje gotowe Pody przez selektor. Samo skalowanie bazy danych w ten sposób byłoby błędne.</div>
+<div class="rancher-observe"><h3>Sprawdź w Rancher Desktop</h3><ol><li>Otwórz Deployment <code>api</code> przed usunięciem Poda i obserwuj liczbę replik.</li><li>Po skalowaniu odśwież widok Podów oraz Service <code>api</code>.</li><li>W widoku <strong>Containers</strong> sprawdź, że pojawił się trzeci kontener API; w <strong>Stats</strong> możesz porównać użycie zasobów replik.</li></ol><p class="rancher-expected"><strong>Oczekiwany widok:</strong> Deployment i lista Podów pokazują trzy gotowe repliki, a Service kieruje ruch do trzech endpointów.</p></div>
 </section>
 
 <section id="zadanie-11" data-task="11"><span class="task-level">Wersje</span><h2>Zadanie 11 — rollout i kontrolowany błąd</h2>
@@ -305,6 +315,7 @@ kubectl describe deployment api
 kubectl rollout undo deployment/api
 kubectl rollout status deployment/api</code></pre>
 <p>Oczekiwany błąd to problem pobrania lokalnie nieistniejącego obrazu. Nie zmieniaj <code>imagePullPolicy</code>, aby „naprawić” eksperyment.</p>
+<div class="rancher-observe"><h3>Sprawdź w Rancher Desktop</h3><ol><li>W Deployment <code>api</code> obserwuj pojawienie się nowego ReplicaSetu i Poda.</li><li>Otwórz błędny Pod i jego Events.</li><li>Po rollbacku sprawdź, czy błędny ReplicaSet został przeskalowany do zera, a wersja <code>1.0.0</code> ponownie ma wszystkie gotowe repliki.</li></ol><p class="rancher-expected"><strong>Oczekiwany widok:</strong> nowy Pod ma stan <code>ErrImageNeverPull</code>, natomiast stare Pody nadal są Ready. Po rollbacku Deployment wraca do zdrowego stanu.</p></div>
 </section>
 
 <section id="zadanie-12" data-task="12"><span class="task-level">Diagnostyka</span><h2>Zadanie 12 — obserwacja i bezpieczne sprzątanie</h2>
@@ -322,6 +333,7 @@ kubectl delete namespace mission-control
 kubectl get namespace mission-control
 docker image ls mission-control-*</code></pre>
 <div class="callout warning"><strong>Przed usunięciem:</strong> pokaż prowadzącemu działającą aplikację i dowody z zadań 9–11. Nie usuwaj innych namespace ani globalnych zasobów Rancher Desktop.</div>
+<div class="rancher-observe"><h3>Sprawdź w Rancher Desktop</h3><ol><li>Przed sprzątaniem otwórz Events, logi wybranego Poda oraz listę wszystkich workloadów Namespace.</li><li>Po poleceniu <code>kubectl delete namespace mission-control</code> odśwież Cluster Dashboard.</li><li>W widoku <strong>Images</strong> sprawdź, że lokalne obrazy Mission Control nadal istnieją — usunięcie Namespace nie usuwa obrazów.</li></ol><p class="rancher-expected"><strong>Oczekiwany widok:</strong> Namespace i wszystkie jego workloady, Service, Secret oraz PVC znikają; lokalne obrazy <code>1.0.0</code> pozostają dostępne.</p></div>
 </section>
 
 <section id="weryfikacja"><h2>Oddanie i kryteria ukończenia</h2>
