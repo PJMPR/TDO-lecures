@@ -1,0 +1,30 @@
+- name: Pobierz klucz repozytorium HashiCorp
+  ansible.builtin.get_url:
+    url: https://apt.releases.hashicorp.com/gpg
+    dest: /usr/share/keyrings/hashicorp.asc
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Dodaj repozytorium HashiCorp
+  ansible.builtin.deb822_repository:
+    name: hashicorp
+    types: [deb]
+    uris: https://apt.releases.hashicorp.com
+    suites: noble
+    components: [main]
+    signed_by: /usr/share/keyrings/hashicorp.asc
+    state: present
+  register: hashicorp_repository
+
+- name: Odśwież cache po dodaniu repozytorium
+  ansible.builtin.apt:
+    update_cache: true
+  when: hashicorp_repository.changed
+
+- name: Zainstaluj przypiętą wersję Terraform
+  ansible.builtin.apt:
+    name: "terraform={{ terraform_version }}"
+    state: present
+    allow_downgrade: true
+

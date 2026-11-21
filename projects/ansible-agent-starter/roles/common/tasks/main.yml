@@ -1,0 +1,4 @@
+---
+# TODO 1: sprawdź przez assert, że host to Ubuntu 24.04 x86_64.
+# TODO 2: zainstaluj common_packages modułem ansible.builtin.apt.
+

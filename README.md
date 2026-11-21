@@ -8,12 +8,15 @@ Statyczna strona kursu przygotowana do publikacji przez GitHub Pages.
 - `lectures/docker/` — prezentacja Docker i Docker Compose
 - `lectures/ci/` — podzielona na sekcje prezentacja CI, SDLC i GitHub Actions
 - `lectures/kubernetes/` — wprowadzenie do Kubernetes z manifestami i scenariuszem demonstracji
+- `lectures/ansible/` — Ansible od problemu dryfu konfiguracji do przygotowania agenta budującego w WSL
 - `labs/docker/` — instrukcja laboratorium nr 1, zgodna ze starterem z tagu `Z1`
 - [Laboratorium 02 — CI i GitHub Actions](labs/ci/index.html) — osobna instrukcja z 23 stopniowymi zadaniami, kryteriami i podpowiedziami
 - [Laboratorium 03 — Kubernetes](labs/kubernetes/index.html) — migracja Angular + ASP.NET Core + MySQL z Compose do Rancher Desktop
 - [Zajęcia nr 2 — CI i SDLC](zajecia-02-scope.md) — zakres wykładu, rdzenia i modułów rozszerzających laboratorium
 - `projects/docker-lab-starter/` — starter .NET + Angular + MySQL do laboratorium CI; gotowe testy, bez lockfiles i gotowego workflow
 - `projects/kubernetes-lab-starter/` — działające rozwiązanie Docker Compose i starter do samodzielnego przygotowania manifestów Kubernetes
+- `projects/ansible-agent-starter/` — szkielet ról Ansible dla lokalnego agenta Ubuntu 24.04 w WSL
+- `projects/ansible-agent-solution/` — kompletne role dla .NET, Node.js, Angular, Terraform i opcjonalnego runnera GitHub Actions
 - `demos/dotnet-mysql/` — demonstracja ASP.NET Core + MySQL
 - `demos/kubernetes-spring/` — aplikacja Spring Boot do uruchomienia w Rancher Desktop
 - `scripts/build-site.mjs` — statyczny build strony i kolorowanie bloków kodu w materiałach

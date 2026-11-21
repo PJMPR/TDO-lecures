@@ -1,0 +1,10 @@
+github_runner_user: actions
+github_runner_dir: /opt/actions-runner
+github_runner_name: wsl-tdo
+github_runner_labels: tdo-build
+github_runner_install_service: false
+github_runner_url: ''
+github_runner_token: ''
+github_runner_download_url: ''
+github_runner_sha256: ''
+

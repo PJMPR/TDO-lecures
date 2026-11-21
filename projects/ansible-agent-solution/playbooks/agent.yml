@@ -1,0 +1,16 @@
+- name: Przygotuj agentów do budowania projektów
+  hosts: build_agents
+  become: true
+  gather_facts: true
+  roles:
+    - role: common
+      tags: [common]
+    - role: dotnet
+      tags: [dotnet]
+    - role: node
+      tags: [node, angular]
+    - role: terraform
+      tags: [terraform]
+    - role: validation
+      tags: [validation]
+

@@ -1,0 +1,44 @@
+- name: Utwórz katalog instalacyjny Node.js
+  ansible.builtin.file:
+    path: "{{ node_install_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Pobierz przypięte archiwum Node.js
+  ansible.builtin.get_url:
+    url: "{{ node_download_url }}"
+    dest: "/var/tmp/{{ node_archive }}"
+    checksum: "sha256:{{ node_sha256 }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Rozpakuj Node.js
+  ansible.builtin.unarchive:
+    src: "/var/tmp/{{ node_archive }}"
+    dest: "{{ node_install_dir }}"
+    remote_src: true
+    extra_opts: [--strip-components=1]
+    creates: "{{ node_install_dir }}/bin/node"
+
+- name: Udostępnij polecenia Node.js w PATH
+  ansible.builtin.file:
+    src: "{{ node_install_dir }}/bin/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    state: link
+    force: true
+  loop:
+    - node
+    - npm
+    - npx
+    - corepack
+
+- name: Zainstaluj przypiętą wersję Angular CLI
+  community.general.npm:
+    name: '@angular/cli'
+    version: "{{ angular_cli_version }}"
+    global: true
+    executable: /usr/local/bin/npm
+

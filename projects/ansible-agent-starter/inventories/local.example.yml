@@ -1,0 +1,7 @@
+all:
+  children:
+    build_agents:
+      hosts:
+        wsl:
+          ansible_connection: local
+

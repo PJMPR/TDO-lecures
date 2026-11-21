@@ -1,0 +1,4 @@
+---
+# TODO 11: odczytaj wersje dotnet, node, npm, ng i terraform bez raportowania zmian.
+# TODO 12: zakończ playbook błędem, jeśli wersje nie odpowiadają deklaracji.
+

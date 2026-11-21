@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { parseArgs, promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +15,7 @@ const defaultViewport = { width: 1440, height: 1000 };
 
 export function privatePath(path, label) {
   const resolved = resolve(path);
-  if (resolved === root || resolved.startsWith(`${root}/`)) {
+  if (resolved === root || resolved.startsWith(`${root}${sep}`)) {
     throw new Error(`Keep the private ${label} outside the repository.`);
   }
   return resolved;

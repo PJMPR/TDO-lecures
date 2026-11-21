@@ -1,0 +1,8 @@
+- name: Zarejestruj opcjonalny GitHub Actions runner
+  hosts: build_agents
+  become: true
+  gather_facts: true
+  roles:
+    - role: github_runner
+      tags: [github_runner]
+

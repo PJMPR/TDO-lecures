@@ -1,0 +1,74 @@
+- name: Wymagaj jawnych danych rejestracji runnera
+  ansible.builtin.assert:
+    that:
+      - github_runner_url | length > 0
+      - github_runner_token | length > 0
+      - github_runner_download_url | length > 0
+      - github_runner_sha256 | length == 64
+    fail_msg: Przekaż URL repozytorium, krótkotrwały token oraz URL i SHA-256 paczki runnera przez extra vars.
+  no_log: true
+
+- name: Utwórz użytkownika runnera
+  ansible.builtin.user:
+    name: "{{ github_runner_user }}"
+    create_home: true
+    shell: /bin/bash
+
+- name: Utwórz katalog runnera
+  ansible.builtin.file:
+    path: "{{ github_runner_dir }}"
+    state: directory
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user }}"
+    mode: '0755'
+
+- name: Pobierz zweryfikowaną paczkę runnera
+  ansible.builtin.get_url:
+    url: "{{ github_runner_download_url }}"
+    dest: /var/tmp/actions-runner.tar.gz
+    checksum: "sha256:{{ github_runner_sha256 }}"
+    mode: '0644'
+
+- name: Rozpakuj runnera
+  ansible.builtin.unarchive:
+    src: /var/tmp/actions-runner.tar.gz
+    dest: "{{ github_runner_dir }}"
+    remote_src: true
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user }}"
+    creates: "{{ github_runner_dir }}/config.sh"
+
+- name: Zarejestruj runnera w GitHub
+  ansible.builtin.command:
+    argv:
+      - ./config.sh
+      - --unattended
+      - --url
+      - "{{ github_runner_url }}"
+      - --token
+      - "{{ github_runner_token }}"
+      - --name
+      - "{{ github_runner_name }}"
+      - --labels
+      - "{{ github_runner_labels }}"
+      - --replace
+    chdir: "{{ github_runner_dir }}"
+    creates: "{{ github_runner_dir }}/.runner"
+  become_user: "{{ github_runner_user }}"
+  no_log: true
+
+- name: Zainstaluj usługę systemd runnera
+  ansible.builtin.command:
+    argv: [./svc.sh, install, "{{ github_runner_user }}"]
+    chdir: "{{ github_runner_dir }}"
+    creates: "{{ github_runner_dir }}/.service"
+  when: github_runner_install_service | bool
+
+- name: Uruchom usługę runnera
+  ansible.builtin.command:
+    argv: [./svc.sh, start]
+    chdir: "{{ github_runner_dir }}"
+  register: runner_service_start
+  changed_when: false
+  when: github_runner_install_service | bool
+

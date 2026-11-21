@@ -1,0 +1,5 @@
+- name: Zainstaluj .NET SDK z repozytorium Ubuntu
+  ansible.builtin.apt:
+    name: "{{ dotnet_sdk_package }}"
+    state: present
+

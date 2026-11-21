@@ -1,0 +1,30 @@
+- name: Odczytaj wersje zainstalowanych narzędzi
+  ansible.builtin.command:
+    argv: "{{ item.command }}"
+  loop:
+    - name: dotnet
+      command: [dotnet, --version]
+    - name: node
+      command: [node, --version]
+    - name: npm
+      command: [npm, --version]
+    - name: angular
+      command: [ng, version]
+    - name: terraform
+      command: [terraform, version]
+  register: tool_versions
+  changed_when: false
+
+- name: Pokaż sprawdzone wersje
+  ansible.builtin.debug:
+    msg: "{{ item.item.name }}: {{ item.stdout_lines | first }}"
+  loop: "{{ tool_versions.results }}"
+
+- name: Sprawdź oczekiwane wersje główne
+  ansible.builtin.assert:
+    that:
+      - (tool_versions.results | selectattr('item.name', 'equalto', 'dotnet') | first).stdout is match('^10\\.')
+      - (tool_versions.results | selectattr('item.name', 'equalto', 'node') | first).stdout == 'v' + node_version
+      - (tool_versions.results | selectattr('item.name', 'equalto', 'terraform') | first).stdout is search('Terraform v1\\.17\\.1')
+    fail_msg: Co najmniej jedno narzędzie ma inną wersję niż zadeklarowana.
+

@@ -1,0 +1,5 @@
+---
+# TODO 8: pobierz klucz https://apt.releases.hashicorp.com/gpg.
+# TODO 9: dodaj podpisane repozytorium HashiCorp dla Ubuntu noble.
+# TODO 10: zainstaluj terraform w terraform_version.
+

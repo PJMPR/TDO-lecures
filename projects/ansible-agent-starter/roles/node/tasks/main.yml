@@ -1,0 +1,6 @@
+---
+# TODO 4: zbuduj URL archiwum Node.js dla node_version.
+# TODO 5: pobierz archiwum przez get_url i zweryfikuj node_sha256.
+# TODO 6: rozpakuj je do /usr/local/lib/nodejs, utwórz symlinki w /usr/local/bin.
+# TODO 7: zainstaluj globalnie @angular/cli w angular_cli_version.
+

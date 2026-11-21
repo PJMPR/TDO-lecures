@@ -1,0 +1,12 @@
+name: Self-hosted toolchains
+on:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: [self-hosted, linux, x64, tdo-build]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify installed tools
+        run: bash projects/ansible-agent-solution/scripts/verify-toolchains.sh
+

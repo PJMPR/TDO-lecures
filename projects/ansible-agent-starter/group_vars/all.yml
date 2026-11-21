@@ -1,0 +1,15 @@
+common_packages:
+  - ca-certificates
+  - curl
+  - git
+  - gnupg
+  - tar
+  - unzip
+  - xz-utils
+
+dotnet_sdk_package: dotnet-sdk-10.0
+node_version: 24.11.1
+node_sha256: 60e3b0a8500819514aca603487c254298cd776de0698d3cd08f11dba5b8289a8
+angular_cli_version: 21.0.0
+terraform_version: 1.17.1-1
+

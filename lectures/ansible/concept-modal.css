@@ -1,0 +1,23 @@
+.has-concept-help{position:relative}
+.concept-help{position:absolute;top:-.55rem;right:-.55rem;z-index:3;display:grid;place-items:center;width:2rem;height:2rem;padding:0;border:1px solid var(--cyan);border-radius:50%;color:#041018;background:var(--cyan);box-shadow:0 0 0 4px rgba(5,8,13,.86),0 0 22px rgba(139,233,253,.4);font:900 1.35rem/1 "Cascadia Code",monospace;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease}
+.concept-help:hover,.concept-help:focus-visible{transform:scale(1.12);box-shadow:0 0 0 4px rgba(5,8,13,.92),0 0 30px rgba(139,233,253,.75);outline:none}
+.concept-modal{width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 32px);padding:0;border:1px solid rgba(139,233,253,.55);color:var(--text);background:linear-gradient(145deg,#111f2c,#070c12);box-shadow:0 35px 100px rgba(0,0,0,.72),0 0 45px rgba(238,0,0,.18)}
+.concept-modal::backdrop{background:rgba(1,4,8,.78);backdrop-filter:blur(7px)}
+.concept-modal__frame{position:relative;padding:clamp(1.5rem,4vw,3rem)}
+.concept-modal__close{position:absolute;top:1rem;right:1rem;width:2.25rem;height:2.25rem;border:1px solid var(--line);border-radius:50%;color:var(--text);background:#071019;font:400 1.5rem/1 sans-serif;cursor:pointer}
+.concept-modal__close:hover,.concept-modal__close:focus-visible{border-color:var(--cyan);color:var(--cyan);outline:none}
+.concept-modal__eyebrow{color:var(--cyan);font:800 .65rem/1.2 "Cascadia Code",monospace;letter-spacing:.18em;text-transform:uppercase}
+.concept-modal h3{position:relative;max-width:18ch;margin:.35em 2.5rem .7em 0;padding-bottom:.35em;color:#fff;font-size:clamp(1.8rem,5vw,3.1rem);line-height:1;letter-spacing:-.035em}
+.concept-modal h3::after{content:"";position:absolute;left:0;bottom:0;width:2.4rem;height:3px;background:linear-gradient(90deg,var(--cyan),var(--ansible));box-shadow:0 0 12px rgba(139,233,253,.55)}
+.concept-modal p{margin:0;color:#d7e7ef;font-size:clamp(1rem,2.1vw,1.18rem);line-height:1.55}
+.concept-tabs{display:flex;gap:.45rem;margin:0 0 1.25rem;border-bottom:1px solid var(--line)}
+.concept-tabs button{position:relative;padding:.7rem .9rem;border:0;color:#8fa7b5;background:transparent;font:800 .72rem/1.2 "Cascadia Code",monospace;letter-spacing:.06em;cursor:pointer}
+.concept-tabs button::after{content:"";position:absolute;left:.5rem;right:.5rem;bottom:-1px;height:3px;background:transparent}
+.concept-tabs button[aria-selected="true"]{color:#fff}
+.concept-tabs button[aria-selected="true"]::after{background:linear-gradient(90deg,var(--cyan),var(--ansible))}
+.concept-tabs button:hover,.concept-tabs button:focus-visible{color:var(--cyan);outline:none}
+.concept-tab-panel{min-height:14rem}
+.concept-tab-code{margin:0;padding:1.1rem;border:1px solid var(--line);background:#05090d;overflow:auto;white-space:pre-wrap}
+.concept-tab-code code{color:#d7e7ef;font:500 clamp(.88rem,1.8vw,1.02rem)/1.55 "Cascadia Code",monospace}
+body:has(.concept-modal[open]){overflow:hidden}
+@media(max-width:760px){.concept-help{top:.35rem;right:.35rem}.concept-modal__frame{padding:1.5rem}.concept-modal h3{font-size:2rem}.concept-tabs{gap:0}.concept-tabs button{padding:.65rem .5rem;font-size:.62rem}.concept-tab-panel{min-height:16rem}}
