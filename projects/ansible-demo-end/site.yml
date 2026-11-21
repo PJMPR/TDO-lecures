@@ -1,0 +1,38 @@
+- name: Przygotuj Debiana WSL
+  hosts: debian_wsl
+  become: true
+  roles:
+    - common
+    - java
+
+  tasks:
+    - name: Sprawdź środowisko Debian x86_64
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == 'Debian'
+          - ansible_architecture == 'x86_64'
+        fail_msg: Projekt wymaga Debian x86_64.
+
+    - name: Sprawdź GitHub CLI
+      ansible.builtin.command: gh --version
+      register: gh_version
+      changed_when: false
+
+    - name: Sprawdź Node.js
+      ansible.builtin.command: node --version
+      register: node_version
+      changed_when: false
+      failed_when: not node_version.stdout.startswith('v' ~ nodejs_major_version ~ '.')
+
+    - name: Sprawdź npm
+      ansible.builtin.command: npm --version
+      changed_when: false
+
+    - name: Sprawdź Java
+      ansible.builtin.command: java --version
+      register: java_version
+      changed_when: false
+
+    - name: Sprawdź Maven
+      ansible.builtin.command: mvn --version
+      changed_when: false

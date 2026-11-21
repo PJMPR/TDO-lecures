@@ -1,0 +1,7 @@
+- name: Zainstaluj Java i Maven
+  ansible.builtin.apt:
+    name:
+      - "{{ java_package }}"
+      - "{{ maven_package }}"
+    state: present
+    update_cache: true

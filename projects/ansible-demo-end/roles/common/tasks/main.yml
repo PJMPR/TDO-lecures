@@ -1,0 +1,25 @@
+- name: Zainstaluj pakiety demonstracyjne
+  ansible.builtin.apt:
+    name: "{{ demo_packages }}"
+    state: present
+    update_cache: true
+
+- name: Zapisz demonstracyjną konfigurację
+  ansible.builtin.copy:
+    dest: "{{ demo_config_path }}"
+    content: "demo_packages={{ demo_packages | join(',') }}\n"
+    mode: '0644'
+  notify: Pokaż zmianę konfiguracji
+
+- name: Sprawdź obecność sekretu demo
+  ansible.builtin.assert:
+    that:
+      - demo_secret is defined
+      - demo_secret | default('') | length > 0
+    fail_msg: Brak niepustej zmiennej demo_secret w group_vars/vault.yml.
+
+- name: Użyj sekretu w zadaniu
+  ansible.builtin.command: /usr/bin/true
+  environment:
+    DEMO_SECRET: "{{ demo_secret }}"
+  no_log: true

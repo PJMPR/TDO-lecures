@@ -1,0 +1,4 @@
+- name: Przygotuj Debiana WSL
+  hosts: debian_wsl
+  become: true
+  tasks: []

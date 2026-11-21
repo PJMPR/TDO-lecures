@@ -1,0 +1,3 @@
+- name: Pokaż zmianę konfiguracji
+  ansible.builtin.debug:
+    msg: "Zmieniono {{ demo_config_path }}"

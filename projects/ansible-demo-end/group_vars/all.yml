@@ -1,0 +1,12 @@
+nodejs_package: nodejs
+npm_package: npm
+nodejs_major_version: "20"
+java_package: openjdk-21-jdk
+maven_package: maven
+
+demo_packages:
+  - gh
+  - "{{ nodejs_package }}"
+  - "{{ npm_package }}"
+
+demo_config_path: /tmp/ansible-demo.conf
