@@ -1,0 +1,63 @@
+---
+- name: Przygotuj Debiana do laboratorium Ansible
+  hosts: debian_wsl
+  become: true
+  roles:
+    - common
+
+  tasks:
+    - name: Sprawdź system zarządzany
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == 'Debian'
+          - ansible_architecture == 'x86_64'
+        fail_msg: Laboratorium wymaga Debiana x86_64.
+
+    - name: Sprawdź wersję gh
+      ansible.builtin.command: gh --version
+      register: gh_version
+      changed_when: false
+
+    - name: Sprawdź wersję .NET
+      ansible.builtin.command: dotnet --version
+      register: dotnet_version
+      changed_when: false
+      failed_when: dotnet_version.rc != 0
+
+    - name: Sprawdź wersję Node.js
+      ansible.builtin.command: node --version
+      register: node_version
+      changed_when: false
+      failed_when: not node_version.stdout.startswith('v' ~ nodejs_major_version ~ '.')
+
+    - name: Sprawdź npm
+      ansible.builtin.command: npm --version
+      register: npm_version
+      changed_when: false
+
+    - name: Sprawdź Java
+      ansible.builtin.command: java --version
+      register: java_version
+      changed_when: false
+
+    - name: Sprawdź Maven
+      ansible.builtin.command: mvn --version
+      register: maven_version
+      changed_when: false
+
+    - name: Zapisz raport wersji
+      ansible.builtin.copy:
+        dest: "{{ report_path }}"
+        mode: '0644'
+        content: |
+          Ansible laboratory report
+          Host: {{ inventory_hostname }}
+          Distribution: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Architecture: {{ ansible_architecture }}
+          gh: {{ gh_version.stdout_lines[0] }}
+          dotnet: {{ dotnet_version.stdout | trim }}
+          node: {{ node_version.stdout | trim }}
+          npm: {{ npm_version.stdout | trim }}
+          java: {{ java_version.stdout_lines[0] }}
+          maven: {{ maven_version.stdout_lines[0] }}
+        validate: /usr/bin/test -s %s

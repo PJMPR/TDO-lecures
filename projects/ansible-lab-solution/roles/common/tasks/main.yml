@@ -1,0 +1,44 @@
+---
+- name: Zainstaluj wymagania APT
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - python3-apt
+    state: present
+    update_cache: true
+
+- name: Zainstaluj narzędzia dostępne w Debianie
+  ansible.builtin.apt:
+    name:
+      - gh
+      - "{{ java_package }}"
+      - "{{ maven_package }}"
+      - nodejs
+      - npm
+    state: present
+
+- name: Pobierz instalator .NET
+  ansible.builtin.get_url:
+    url: https://dot.net/v1/dotnet-install.sh
+    dest: /tmp/dotnet-install.sh
+    mode: '0755'
+
+- name: Zainstaluj .NET SDK
+  ansible.builtin.command: "/tmp/dotnet-install.sh --channel {{ dotnet_channel }} --install-dir /usr/share/dotnet"
+  args:
+    creates: /usr/share/dotnet/dotnet
+
+- name: Udostępnij polecenie dotnet
+  ansible.builtin.file:
+    src: /usr/share/dotnet/dotnet
+    dest: /usr/local/bin/dotnet
+    state: link
+
+- name: Zapisz znacznik konfiguracji laboratorium
+  ansible.builtin.copy:
+    dest: /etc/ansible-lab.conf
+    content: "Ansible laboratory configured\n"
+    mode: '0644'
+  notify: Sprawdź konfigurację laboratorium

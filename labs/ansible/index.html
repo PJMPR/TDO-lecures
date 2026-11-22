@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Laboratorium Ansible: konfiguracja Debiana WSL z Ubuntu jako control node.">
+<title>Laboratorium 04 · Ansible</title>
+<link rel="stylesheet" href="../../assets/css/site.css">
+<link rel="stylesheet" href="../../assets/css/code-highlighting.css">
+<link rel="stylesheet" href="../ci/lab.css">
+<link rel="stylesheet" href="lab.css">
+<script src="../ci/lab.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#tresc">Przejdź do instrukcji</a>
+<header class="site-header"><nav class="shell nav" aria-label="Główna nawigacja">
+<a class="brand" href="../../index.html"><span class="brand-mark" aria-hidden="true">◇</span>TDO // LAB 04</a>
+<div class="nav-links"><a href="#slowniczek">Słowniczek</a><a href="#przygotowanie">Przygotowanie</a><a href="#zadanie-01">Zadania</a><a href="#weryfikacja">Kryteria</a><a href="../../lectures/ansible/index.html">Wykład 04</a></div>
+</nav></header>
+<main class="shell doc-layout">
+<aside class="toc"><details class="toc-fold" data-lab-toc open><summary>Plan laboratorium</summary><nav aria-label="Spis treści">
+<a href="#cel">Cel i architektura</a><a href="#slowniczek">Słowniczek pojęć</a><a href="#wsl">Przygotowanie WSL</a><a href="#przygotowanie">Kontrola środowiska</a><a href="#starter">Starter</a>
+<p class="toc-group">Konfiguracja hosta</p>
+<a href="#zadanie-01">1. Inventory i SSH</a><a href="#zadanie-02">2. Ping i playbook</a><a href="#zadanie-03">3. Zmienne i wersje</a><a href="#zadanie-04">4. Rola i pakiety</a><a href="#zadanie-05">5. Repozytoria i narzędzia</a>
+<p class="toc-group">Weryfikacja stanu</p>
+<a href="#zadanie-06">6. Facts i asercje</a><a href="#zadanie-07">7. Raport i handler</a><a href="#zadanie-08">8. Check i idempotencja</a><a href="#zadanie-09">9. Weryfikacja zmiany Debiana</a>
+<a href="#weryfikacja">Oddanie i kryteria</a><a href="#rozszerzenia">Zadania do samodzielnego wykonania</a>
+</nav></details></aside>
+<article class="doc ci-lab" id="tresc" tabindex="-1">
+<div class="eyebrow">Laboratorium 04 / Ansible / WSL</div>
+<h1>Skonfiguruj Debiana z Ubuntu przez Ansible</h1>
+<p class="lead">Ubuntu WSL będzie control node, a Debian WSL hostem zarządzanym przez SSH. Uzupełnisz szkielet playbooka, zainstalujesz wymagane narzędzia i udowodnisz, że konfiguracja jest powtarzalna.</p>
+<section id="cel"><h2>Cel i sposób pracy</h2>
+<p>Nie wykonujesz instalacji ręcznie na Debianie. Opisujesz oczekiwany stan w projekcie <code>ansible-lab-start</code>, a Ansible wykonuje zadania z Ubuntu.</p>
+<div class="architecture-grid"><div><strong>Ubuntu WSL</strong><span>control node</span><span>Ansible</span><span>inventory i playbook</span></div><div class="migration-arrow">→</div><div><strong>Debian WSL</strong><span>managed node</span><span>SSH + Python</span><span>gh, .NET, Java, Maven, Node.js</span></div></div>
+<ul><li>Wykonuj zadania po kolei i zapisuj zmiany w projekcie.</li><li>Wszystkie polecenia Ansible uruchamiaj z katalogu projektu.</li><li>Ścieżki są względne względem <code>ansible-lab-start</code>.</li><li>Nie zapisuj haseł ani kluczy prywatnych w repozytorium.</li></ul>
+<div class="callout"><strong>Ważne:</strong> <em>Become password</em> to hasło użytkownika na Debianie używane przez sudo.</div>
+</section>
+<section id="slowniczek" class="glossary"><h2>Słowniczek pojęć</h2><p class="glossary-intro">Kliknij hasło, aby przejść do zadania, w którym pojęcie jest wyjaśnione i użyte praktycznie.</p>
+<nav class="glossary-grid" aria-label="Słowniczek pojęć Ansible">
+<a href="#zadanie-01"><strong>Control node</strong><span>maszyna uruchamiająca Ansible</span></a>
+<a href="#zadanie-01"><strong>Managed node</strong><span>host konfigurowany przez Ansible</span></a>
+<a href="#zadanie-01"><strong>Inventory</strong><span>lista hostów i parametrów połączenia</span></a>
+<a href="#zadanie-02"><strong>Playbook</strong><span>deklaratywny przebieg konfiguracji</span></a>
+<a href="#zadanie-04"><strong>Role</strong><span>uporządkowany moduł zadań i handlerów</span></a>
+<a href="#zadanie-06"><strong>Facts</strong><span>informacje zebrane o hoście</span></a>
+<a href="#zadanie-07"><strong>Handler</strong><span>zadanie uruchamiane po zmianie</span></a>
+<a href="#zadanie-08"><strong>Idempotencja</strong><span>kolejne uruchomienie nie powtarza zmiany</span></a>
+</nav>
+</section>
+<section id="wsl"><h2>Przygotowanie środowiska WSL</h2>
+<p>W laboratorium używasz dwóch dystrybucji WSL 2: Ubuntu jako control node i Debiana jako managed node. Wykonuj polecenia w odpowiedniej dystrybucji.</p>
+<div class="architecture-grid"><div><strong>Windows PowerShell</strong><span>instalacja i lista dystrybucji</span><span>kontrola wersji WSL</span></div><div class="migration-arrow">→</div><div><strong>Ubuntu + Debian WSL</strong><span>Ubuntu: Ansible i SSH client</span><span>Debian: SSH server i Python</span></div></div>
+<h3>1. Zainstaluj dystrybucje WSL</h3>
+<p>W PowerShell uruchomionym jako administrator sprawdź dostępne dystrybucje i zainstaluj Ubuntu oraz Debiana.</p>
+<pre><code class="language-powershell">wsl --set-default-version 2
+wsl --list --online
+wsl --install -d Ubuntu-24.04
+wsl --install -d Debian
+wsl --list --verbose</code></pre><div class="callout"><strong>Nazwy użytkowników ustal od razu:</strong> przy pierwszym uruchomieniu Ubuntu wpisz nazwę <code>ansible-control</code>; przy pierwszym uruchomieniu Debiana wpisz nazwę <code>ansible-managed</code>. Nie używaj tutaj domyślnej nazwy typu <code>student</code>, aby role obu maszyn były jednoznaczne.</div>
+<details class="step-hint"><summary>Pokaż podpowiedź</summary><p>Przy pierwszym uruchomieniu Ubuntu utwórz użytkownika <code>ansible-control</code>, a przy pierwszym uruchomieniu Debiana utwórz użytkownika <code>ansible-managed</code>. Ustaw hasła i zapamiętaj je do operacji <code>sudo</code>. W <code>wsl --list --verbose</code> kolumna VERSION powinna mieć wartość <code>2</code>.</p></details>
+<h3>2. Przygotuj Ubuntu jako control node</h3>
+<p>Uruchom Ubuntu i zainstaluj Ansible oraz klienta SSH.</p>
+<pre><code class="language-bash">wsl -d Ubuntu-24.04
+sudo apt update
+sudo apt install -y ansible openssh-client
+ansible --version
+ssh -V</code></pre>
+<h3>3. Przygotuj Debiana jako managed node</h3>
+<p>W osobnym terminalu uruchom Debiana. Zainstaluj serwer SSH, Pythona i sudo, a następnie uruchom usługę SSH.</p>
+<pre><code class="language-bash">wsl -d Debian
+sudo apt update
+sudo apt install -y openssh-server python3 sudo
+sudo service ssh start
+sudo service ssh status
+hostname -I</code></pre>
+<div class="callout warning"><strong>Adres IP Debiana</strong> może zmienić się po ponownym uruchomieniu WSL. Do inventory wpisuj aktualny adres z <code>hostname -I</code>.</div>
+<h3>4. Skonfiguruj klucz SSH</h3>
+<p>W Ubuntu utwórz klucz Ed25519 i dodaj jego klucz publiczny do użytkownika na Debianie.</p>
+<pre><code class="language-bash"># Ubuntu
+ssh-keygen -t ed25519
+ssh-copy-id ansible-managed@ADRES_DEBIANA
+ssh ansible-managed@ADRES_DEBIANA 'python3 --version'</code></pre>
+<details class="step-hint"><summary>Jeśli nie masz ssh-copy-id</summary><p>Na Debianie utwórz katalog <code>~/.ssh</code> i dopisz zawartość pliku Ubuntu <code>~/.ssh/id_ed25519.pub</code> do <code>~/.ssh/authorized_keys</code>. Ustaw prawa katalogu na <code>700</code>, a pliku na <code>600</code>.</p></details>
+<h3>5. Sprawdź gotowe środowisko</h3>
+<pre><code class="language-bash"># Ubuntu
+ssh ansible-managed@ADRES_DEBIANA 'hostname && python3 --version'
+ansible all -i 'ADRES_DEBIANA,' -u ansible-managed -m ansible.builtin.ping</code></pre>
+<div class="callout"><strong>Oczekiwany rezultat:</strong> zwykłe SSH wykonuje komendę na Debianie, a Ansible zwraca <code>pong</code>. Dopiero teraz przejdź do inventory projektu.</div>
+</section>
+<section id="przygotowanie"><h2>Przygotowanie</h2><div class="callout"><strong>Użytkownicy są tworzeni podczas pierwszego uruchomienia WSL:</strong> Ubuntu używa <code>ansible-control</code>, a Debian <code>ansible-managed</code>. Nie twórz później drugich kont o innych nazwach.</div><ul class="checklist"><li>Ubuntu WSL ma Ansible.</li><li>Debian WSL ma działający SSH.</li><li>Z Ubuntu logujesz się do Debiana kluczem SSH.</li><li>Użytkownik może wykonać <code>sudo</code>.</li><li>Na Debianie działa Python 3.</li></ul>
+<pre><code class="language-bash"># Ubuntu WSL
+ansible --version
+ssh -V
+
+# Debian WSL
+hostname -I
+sudo systemctl status ssh
+python3 --version</code></pre>
+<div class="callout warning"><strong>Nie przechodź dalej z błędem SSH.</strong> Sprawdź adres IP, użytkownika, klucz i port 22.</div></section>
+<section id="starter"><h2>Starter projektu</h2><p>Otwórz <code>projects/ansible-lab-start</code>. Struktura jest gotowa, ale implementacja zadań zawiera komentarze <code>TODO</code>.</p>
+<pre><code class="language-bash">cd projects/ansible-lab-start
+find . -maxdepth 3 -type f | sort</code></pre>
+<div class="callout"><strong>Modyfikowane pliki:</strong> <code>inventory.yml</code>, <code>site.yml</code>, <code>group_vars/all.yml</code>, <code>roles/common/tasks/main.yml</code> i <code>roles/common/handlers/main.yml</code>.</div></section>
+
+<section id="zadanie-01" data-task="1"><span class="task-level">Konfiguracja hosta</span><h2>Zadanie 1 — inventory i SSH</h2><p>Uzupełnij <code>inventory.yml</code> adresem Debiana z <code>hostname -I</code>, użytkownikiem, portem i kluczem SSH.</p>
+<pre><code class="language-yaml">all:
+  hosts:
+    debian_wsl:
+      ansible_host: ADRES_DEBIANA
+      ansible_user: ansible-managed
+      ansible_connection: ssh
+      ansible_port: 22
+      ansible_ssh_private_key_file: ~/.ssh/id_ed25519</code></pre>
+<pre><code class="language-bash">ansible-inventory -i inventory.yml --graph
+ansible all -i inventory.yml -m ansible.builtin.ping</code></pre>
+<details class="step-hint"><summary>Pokaż podpowiedź diagnostyczną</summary><p><code>no such identity</code> oznacza brak klucza. <code>Permission denied</code> oznacza problem z <code>authorized_keys</code> lub użytkownikiem.</p></details>
+</section>
+
+<section id="zadanie-02" data-task="2"><span class="task-level">Playbook</span><h2>Zadanie 2 — pierwszy playbook</h2><p>W <code>site.yml</code> wybierz host <code>debian_wsl</code>, włącz sudo i uruchom rolę <code>common</code>.</p>
+<pre><code class="language-yaml">- name: Przygotuj Debiana do laboratorium Ansible
+  hosts: debian_wsl
+  become: true
+  roles:
+    - common</code></pre>
+<pre><code class="language-bash">ansible-playbook -i inventory.yml site.yml --check --ask-become-pass</code></pre>
+<details class="step-hint"><summary>Pokaż oczekiwany rezultat</summary><p>Playbook powinien połączyć się z Debianem i zebrać Facts.</p></details>
+</section>
+
+<section id="zadanie-03" data-task="3"><span class="task-level">Zmienne</span><h2>Zadanie 3 — wersje poza zadaniami</h2><p>W <code>group_vars/all.yml</code> zdefiniuj wersję Node.js, pakiety Java, Maven i .NET oraz ścieżkę raportu.</p>
+<pre><code class="language-yaml">nodejs_major_version: "20"
+java_package: openjdk-21-jdk
+maven_package: maven
+dotnet_channel: "10.0"
+report_path: /tmp/ansible-lab-report.txt</code></pre>
+</section>
+
+<section id="zadanie-04" data-task="4"><span class="task-level">Rola</span><h2>Zadanie 4 — pakiety bazowe</h2><p>W <code>roles/common/tasks/main.yml</code> dodaj zadanie instalujące wymagania APT przez moduł <code>ansible.builtin.apt</code>.</p>
+<pre><code class="language-yaml">- name: Zainstaluj wymagania APT
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - python3-apt
+    state: present
+    update_cache: true</code></pre>
+<p>Jeśli check mode zgłasza brak <code>python3-apt</code>, wykonaj pierwszy przebieg normalnie.</p><div class="callout"><strong>Po zmianie uruchom playbook:</strong><pre><code class="language-bash">ansible-playbook -i inventory.yml site.yml --check --diff --ask-become-pass
+ansible-playbook -i inventory.yml site.yml --ask-become-pass</code></pre><p>Najpierw sprawdzasz przewidywane zmiany, a dopiero potem instalujesz pakiety bazowe.</p></div>
+<div class="callout verification"><h3>Sprawdź na Debianie</h3><p><strong>Z Ubuntu:</strong> sprawdź rezultat z control node przez Ansible.</p><pre><code class="language-bash">ansible debian_wsl -i inventory.yml -m ansible.builtin.command -a 'dpkg -s python3-apt'</code></pre><p><strong>W konsoli Debiana:</strong> wykonaj sprawdzenie bezpośrednio na hoście zarządzanym.</p><pre><code class="language-bash">dpkg -s python3-apt | grep Status</code></pre></div>
+</section>
+
+<section id="zadanie-05" data-task="5"><span class="task-level">Narzędzia developerskie</span><h2>Zadanie 5 — narzędzia developerskie</h2><p>Rozszerz rolę o GitHub CLI, .NET SDK, OpenJDK, Maven oraz Node.js. Pakiety dostępne w Debianie instaluj modułem <code>ansible.builtin.apt</code>, a .NET SDK instaluj oficjalnym skryptem opisanym niżej.</p>
+<div class="glossary-definition"><p><strong>Instrukcja instalacji:</strong> użyj repozytoriów Debiana dla <code>gh</code>, Node.js, npm, Java i Maven. Nie dodawaj kluczy GPG ani zewnętrznych repozytoriów APT w zadaniu podstawowym.</p><p><strong>Zmienne:</strong> przed wykonaniem zadania sprawdź plik <code>group_vars/all.yml</code>. To z niego pochodzą <code>java_package</code>, <code>maven_package</code>, <code>dotnet_channel</code> oraz <code>report_path</code>. Ansible ładuje ten plik automatycznie dla wszystkich hostów.</p><ol class="task-steps"><li>Odśwież cache APT modułem <code>ansible.builtin.apt</code>.</li><li>Zainstaluj <code>gh</code>, <code>nodejs</code>, <code>npm</code>, <code>openjdk-21-jdk</code> i <code>maven</code> jednym lub kilkoma zadaniami <code>apt</code>.</li><li>.NET SDK zainstaluj oficjalnym skryptem <code>dotnet-install.sh</code>, ponieważ nie ma go w standardowym repozytorium Debiana.</li><li>Po instalacji sprawdź wszystkie wersje bezpośrednio na Debianie.</li></ol></div>
+
+<details class="step-hint"><summary>Pokaż instrukcję wykonania</summary>
+<ol><li>W <code>roles/common/tasks/main.yml</code> dodaj zadanie <code>ansible.builtin.apt</code>. Pakiety z repozytoriów Debiana instaluj deklaratywnie:
+<pre><code class="language-yaml">- name: Zainstaluj narzędzia z Debiana
+  ansible.builtin.apt:
+    name:
+      - gh
+      - nodejs
+      - npm
+      - "{{ java_package }}"
+      - "{{ maven_package }}"
+    state: present
+    update_cache: true</code></pre>
+Moduł <code>apt</code> sprawdza, czy pakiet jest już obecny, więc kolejne uruchomienie nie instaluje go ponownie.</li>
+<li>Pobierz skrypt instalacyjny .NET na Debiana:
+<pre><code class="language-yaml">- name: Pobierz instalator .NET
+  ansible.builtin.get_url:
+    url: https://dot.net/v1/dotnet-install.sh
+    dest: /tmp/dotnet-install.sh
+    mode: '0755'</code></pre>
+<code>get_url</code> pobiera plik na host zarządzany i nadaje mu prawa wykonywania.</li>
+<li>Uruchom skrypt tylko wtedy, gdy .NET nie jest jeszcze zainstalowany:
+<pre><code class="language-yaml">- name: Zainstaluj .NET SDK
+  ansible.builtin.command: "/tmp/dotnet-install.sh --channel {{ dotnet_channel }} --install-dir /usr/share/dotnet"
+  args:
+    creates: /usr/share/dotnet/dotnet</code></pre>
+<code>args.creates</code> chroni przed ponownym uruchomieniem instalatora.</li>
+<li>Udostępnij polecenie wszystkim użytkownikom:
+<pre><code class="language-yaml">- name: Udostępnij polecenie dotnet
+  ansible.builtin.file:
+    src: /usr/share/dotnet/dotnet
+    dest: /usr/local/bin/dotnet
+    state: link</code></pre>
+Link w <code>/usr/local/bin</code> pozwala wywołać <code>dotnet</code> bez podawania pełnej ścieżki.</li>
+<li>Po zastosowaniu zmian sprawdź wersje lokalnie w konsoli Debiana oraz z Ubuntu przez Ansible.</li></ol>
+</details><div class="callout"><strong>Po zmianie uruchom playbook:</strong><pre><code class="language-bash">ansible-playbook -i inventory.yml site.yml --check --diff --ask-become-pass
+ansible-playbook -i inventory.yml site.yml --ask-become-pass</code></pre><p>Po normalnym wykonaniu przejdź do bloku „Sprawdź na Debianie”.</p></div>
+<div class="callout verification"><h3>Sprawdź na Debianie</h3><p><strong>Z Ubuntu:</strong> sprawdź rezultat z control node przez Ansible.</p><pre><code class="language-bash">ansible debian_wsl -i inventory.yml -m ansible.builtin.command -a 'gh --version'
+ansible debian_wsl -i inventory.yml -m ansible.builtin.command -a 'dotnet --version'
+ansible debian_wsl -i inventory.yml -m ansible.builtin.command -a 'java --version'
+ansible debian_wsl -i inventory.yml -m ansible.builtin.command -a 'mvn --version'
+ansible debian_wsl -i inventory.yml -m ansible.builtin.command -a 'node --version'
+ansible debian_wsl -i inventory.yml -m ansible.builtin.command -a 'npm --version'</code></pre><p><strong>W konsoli Debiana:</strong> wykonaj sprawdzenie bezpośrednio na hoście zarządzanym.</p><pre><code class="language-bash">gh --version
+dotnet --version
+java --version
+mvn --version
+node --version
+npm --version</code></pre></div>
+</section>
+
+<section id="zadanie-06" data-task="6"><span class="task-level">Weryfikacja</span><h2>Zadanie 6 — Facts, register i asercje</h2><p>Dodaj asercję Debiana x86_64 i sprawdzenie Node.js z użyciem <code>register</code>.</p>
+<pre><code class="language-yaml">- name: Sprawdź system zarządzany
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == 'Debian'
+      - ansible_architecture == 'x86_64'
+    fail_msg: Laboratorium wymaga Debiana x86_64.
+
+- name: Sprawdź Node.js
+  ansible.builtin.command: node --version
+  register: node_version
+  changed_when: false
+  failed_when: not node_version.stdout.startswith('v' ~ nodejs_major_version ~ '.') </code></pre>
+<details class="step-hint"><summary>Pokaż oczekiwany rezultat</summary><p>Poprawny host i wersja dają <code>ok</code>. Fałszywa asercja zatrzymuje playbook.</p></details>
+<details class="step-hint"><summary>Rozszerz asercje dla wszystkich narzędzi</summary><p>Masz już przykład dla Node.js. Dodaj teraz analogiczne zadania dla pozostałych narzędzi. Poniżej znajduje się jeden przykład — dopisz resztę samodzielnie.</p><pre><code class="language-yaml">- name: Sprawdź wersję .NET
+  ansible.builtin.command: dotnet --version
+  register: dotnet_version
+  changed_when: false
+  failed_when: dotnet_version.rc != 0
+
+- name: Potwierdź obecność .NET
+  ansible.builtin.assert:
+    that:
+      - dotnet_version.rc == 0
+      - dotnet_version.stdout | trim | length > 0
+    fail_msg: .NET SDK nie jest dostępny na Debianie.</code></pre><p>Dopisz podobne pary zadań dla <code>gh</code>, <code>npm</code>, Java, Maven i Node.js. Każde sprawdzenie powinno używać <code>register</code>, <code>changed_when: false</code> oraz <code>assert</code>.</p></details>
+<div class="callout"><strong>Po zmianie uruchom playbook:</strong><pre><code class="language-bash">ansible-playbook -i inventory.yml site.yml --check --diff --ask-become-pass
+ansible-playbook -i inventory.yml site.yml --ask-become-pass</code></pre><p>Asercje i sprawdzenia nie powinny wprowadzać zmian na hoście; ich zadaniem jest potwierdzenie założeń.</p></div>
+</section>
+
+<section id="zadanie-07" data-task="7"><span class="task-level">Raport</span><h2>Zadanie 7 — raport i handler</h2><p>Utwórz na Debianie raport wersji wszystkich narzędzi. Dodaj plik konfiguracyjny i handler uruchamiany po jego zmianie.</p>
+<pre><code class="language-yaml">- name: Zapisz znacznik konfiguracji
+  ansible.builtin.copy:
+    dest: /etc/ansible-lab.conf
+    content: "Ansible laboratory configured\n"
+  notify: Sprawdź konfigurację laboratorium</code></pre>
+<pre><code class="language-yaml"># roles/common/handlers/main.yml
+- name: Sprawdź konfigurację laboratorium
+  ansible.builtin.command: test -s /etc/ansible-lab.conf
+  changed_when: false</code></pre>
+<div class="callout"><strong>Po zmianie uruchom playbook:</strong><pre><code class="language-bash">ansible-playbook -i inventory.yml site.yml --check --diff --ask-become-pass
+ansible-playbook -i inventory.yml site.yml --ask-become-pass</code></pre><p>Dopiero po zastosowaniu zmian sprawdź raport i plik handlera na Debianie.</p></div>
+<div class="callout verification"><h3>Sprawdź na Debianie</h3><p><strong>Z Ubuntu:</strong> sprawdź rezultat z control node przez Ansible.</p><pre><code class="language-bash">ansible debian_wsl -i inventory.yml -m ansible.builtin.stat -a 'path=/tmp/ansible-lab-report.txt'
+ansible debian_wsl -i inventory.yml -m ansible.builtin.command -a 'cat /tmp/ansible-lab-report.txt'
+ansible debian_wsl -i inventory.yml -m ansible.builtin.stat -a 'path=/etc/ansible-lab.conf'</code></pre><p><strong>W konsoli Debiana:</strong> wykonaj sprawdzenie bezpośrednio na hoście zarządzanym.</p><pre><code class="language-bash">stat /tmp/ansible-lab-report.txt
+cat /tmp/ansible-lab-report.txt
+stat /etc/ansible-lab.conf</code></pre></div>
+</section>
+
+<section id="zadanie-08" data-task="8"><span class="task-level">Bezpieczne wykonanie</span><h2>Zadanie 8 — check mode i idempotencja</h2><p>Wykonaj dry-run, zastosuj konfigurację, a następnie uruchom ją drugi raz.</p>
+<pre><code class="language-bash">ansible-playbook -i inventory.yml site.yml --check --diff --ask-become-pass
+ansible-playbook -i inventory.yml site.yml --ask-become-pass
+ansible-playbook -i inventory.yml site.yml --ask-become-pass</code></pre>
+<div class="callout"><strong>Oczekiwany rezultat:</strong> pierwszy przebieg wprowadza zmiany, a drugi raportuje głównie <code>ok</code>.</div><div class="callout verification"><h3>Sprawdź na Debianie</h3><p><strong>Z Ubuntu:</strong> sprawdź rezultat z control node przez Ansible.</p><pre><code class="language-bash">ansible debian_wsl -i inventory.yml -m ansible.builtin.command -a 'test -s /tmp/ansible-lab-report.txt'
+ansible debian_wsl -i inventory.yml -m ansible.builtin.command -a 'test -s /etc/ansible-lab.conf'</code></pre><p><strong>W konsoli Debiana:</strong> wykonaj sprawdzenie bezpośrednio na hoście zarządzanym.</p><pre><code class="language-bash">test -s /tmp/ansible-lab-report.txt && echo 'raport OK'
+test -s /etc/ansible-lab.conf && echo 'konfiguracja OK'</code></pre></div>
+</section>
+
+<section id="zadanie-09" data-task="9"><span class="task-level">Dowód zmiany</span><h2>Zadanie 9 — sprawdź, czy Debian się zmienił</h2>
+<p>Porównaj stan Debiana przed i po wykonaniu playbooka. Potwierdź zmianę bezpośrednio na hoście zarządzanym oraz sprawdź wynik drugiego przebiegu.</p>
+<pre><code class="language-bash"># przed zmianą — oczekiwany brak pliku
+ansible debian_wsl -i inventory.yml -m ansible.builtin.command -a 'test -e /tmp/ansible-lab-report.txt'
+
+# zastosowanie konfiguracji
+ansible-playbook -i inventory.yml site.yml --ask-become-pass
+
+# dowód zmiany na Debianie
+ansible debian_wsl -i inventory.yml -m ansible.builtin.command -a 'hostname'
+ansible debian_wsl -i inventory.yml -m ansible.builtin.command -a 'cat /tmp/ansible-lab-report.txt'
+ansible debian_wsl -i inventory.yml -m ansible.builtin.stat -a 'path=/tmp/ansible-lab-report.txt'
+
+# ponowne wykonanie — oczekuj głównie ok
+ansible-playbook -i inventory.yml site.yml --ask-become-pass</code></pre>
+<div class="callout"><strong>Oczekiwany dowód:</strong> pierwszy przebieg tworzy raport na Debianie, raport zawiera fakty systemu, a drugi przebieg nie tworzy ponownej zmiany.</div>
+<div class="callout verification"><h3>Sprawdź na Debianie</h3><p><strong>Z Ubuntu:</strong> sprawdź rezultat z control node przez Ansible.</p><pre><code class="language-bash">ansible debian_wsl -i inventory.yml -m ansible.builtin.command -a 'hostname'
+ansible debian_wsl -i inventory.yml -m ansible.builtin.stat -a 'path=/tmp/ansible-lab-report.txt'</code></pre><p><strong>W konsoli Debiana:</strong> wykonaj sprawdzenie bezpośrednio na hoście zarządzanym.</p><pre><code class="language-bash">hostname
+cat /tmp/ansible-lab-report.txt
+stat /tmp/ansible-lab-report.txt</code></pre></div>
+</section>
+
+<section id="weryfikacja"><h2>Oddanie i kryteria ukończenia</h2><p>Oddaj projekt z katalogu <code>ansible-lab-start</code>. W README dopisz tabelę: zadanie, polecenie, oczekiwany i zaobserwowany rezultat.</p>
+<ul class="checklist"><li>Inventory łączy Ubuntu z Debianem przez SSH.</li><li>Playbook używa roli <code>common</code> i <code>become</code>.</li><li>Zainstalowane są gh, .NET 10, Java 21, Maven, Node.js 20 i npm.</li><li>Wersje są sterowane zmiennymi.</li><li>Facts i asercja sprawdzają Debiana x86_64.</li><li>Raport wersji powstaje na Debianie.</li><li>Handler reaguje po zmianie.</li><li>Check mode i drugi przebieg potwierdzają idempotencję.</li></ul>
+<section id="rozszerzenia"><h3>Zadania do samodzielnego wykonania</h3><p>Wybierz lub wykonaj wszystkie rozszerzenia. Poniżej znajduje się wyłącznie cel i oczekiwany rezultat — sposób rozwiązania zaprojektuj samodzielnie.</p><ol class="task-steps"><li><strong>Terraform:</strong> zainstaluj Terraform na Debianie, sprawdź jego wersję i dodaj wynik do raportu środowiska.</li><li><strong>Angular CLI:</strong> zainstaluj Angular CLI przez npm, utwórz przykładowy projekt i potwierdź działanie polecenia <code>ng</code>.</li><li><strong>Ansible Vault:</strong> przenieś wybraną wartość do zaszyfrowanego pliku Vault, użyj jej w zadaniu i zabezpiecz logi przed ujawnieniem sekretu.</li></ol></section></section>
+
+
+
+
+</article></main>
+<footer class="footer"><div class="shell">TDO · Laboratorium 04 · Ansible · <a href="../../index.html">Powrót do kursu</a></div></footer>
+</body></html>

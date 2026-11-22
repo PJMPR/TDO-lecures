@@ -1,0 +1,16 @@
+---
+- name: Przygotuj Debiana do laboratorium Ansible
+  hosts: debian_wsl
+  become: true
+
+  roles:
+    - common # TODO: uzupełnij rolę common
+
+  tasks:
+    - name: TODO — sprawdź system zarządzany
+      ansible.builtin.debug:
+        msg: Uzupełnij asercję Facts dla Debiana x86_64.
+
+    - name: TODO — utwórz raport wersji
+      ansible.builtin.debug:
+        msg: Zbierz wersje narzędzi i zapisz je w {{ report_path }}.

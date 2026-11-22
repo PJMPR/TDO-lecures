@@ -1,0 +1,9 @@
+---
+# TODO 1: przygotuj cache APT i wymagane pakiety pomocnicze.
+# TODO 2: dodaj instalację gh, .NET SDK, Java, Maven, Node.js i npm.
+# TODO 3: użyj zmiennych z group_vars/all.yml zamiast powtarzać wartości.
+# TODO 4: dodaj zadanie tworzące raport wersji.
+# TODO 5: powiadom handler po zmianie pliku konfiguracyjnego.
+- name: TODO — potwierdź uruchomienie roli
+  ansible.builtin.debug:
+    msg: Rola common jest gotowa do uzupełnienia.

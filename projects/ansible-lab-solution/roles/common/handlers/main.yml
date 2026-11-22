@@ -1,0 +1,4 @@
+---
+- name: Sprawdź konfigurację laboratorium
+  ansible.builtin.command: test -s /etc/ansible-lab.conf
+  changed_when: false

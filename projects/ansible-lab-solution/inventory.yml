@@ -1,0 +1,8 @@
+all:
+  hosts:
+    debian_wsl:
+      ansible_host: 192.0.2.10 # ustaw adres Debiana przed uruchomieniem
+      ansible_user: ansible-managed
+      ansible_connection: ssh
+      ansible_port: 22
+      ansible_ssh_private_key_file: ~/.ssh/id_ed25519

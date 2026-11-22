@@ -1,0 +1,6 @@
+---
+nodejs_major_version: "20"
+java_package: openjdk-21-jdk
+maven_package: maven
+dotnet_channel: "10.0"
+report_path: /tmp/ansible-lab-report.txt

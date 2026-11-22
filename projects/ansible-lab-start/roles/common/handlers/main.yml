@@ -1,0 +1,5 @@
+---
+# TODO: dodaj handler odświeżający lub sprawdzający konfigurację raportu.
+- name: TODO — placeholder handlera
+  ansible.builtin.debug:
+    msg: Handler zostanie uzupełniony przez studenta.
